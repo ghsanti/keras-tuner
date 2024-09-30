@@ -1,0 +1,110 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-format:
+    name: Lint, format, test example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        id: setup-uv
+        with:
+          enable-cache: true
+          version: "0.4.14"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Note that astral-sh/setup-uv will automatically use a separate cache key for each host architecture and platform.
+      - name: Install Python 3.10
+        uses: uv python install 3.10
+      - name: Install the project
+        run: uv sync --all-extras  --no-progress
+      - name: run example
+        run: uv example.py
+
+  tensorflow:
+    name: single backend test across python versions.
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+        fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        id: setup-uv
+        with:
+          enable-cache: true
+          version: "0.4.14"
+
+      - name: Install Python ${{ matrix.python-version }}
+        run: uv python install ${{matrix.python-version}}
+
+      - name: Install the project
+        run: uv sync --all-extras --no-progress
+      - name: Do something if the cache was restored
+        if: steps.setup-uv.outputs.cache-hit == 'true'
+        run: echo "Cache was restored"
+
+      - name: Test with PyTest
+        env:
+          KERAS_BACKEND: "tensorflow" # not needed, but for the future.
+        run: |
+          uv run -- pytest --cov=keras_tuner --cov-report xml:coverage.xml
+      - name: Codecov
+      - uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true # optional (default = false)
+          files: ./coverage.xml # optional
+          name: keras_tuner # optional
+          token: ${{ secrets.GITHUB_TOKEN }} # required
+          verbose: true # optional (default = false)
+
+
+  # test-multibackend:
+  #   name: Multibackend, multi-python test.
+  #   runs-on: ubuntu-latest
+
+  #   strategy:
+  #     matrix:
+  #       python-version:
+  #         - "3.10"
+  #         - "3.11"
+  #         - "3.12"
+  #       backend: [tensorflow, jax, torch]
+  #       fail-fast: false
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Install uv
+  #       uses: astral-sh/setup-uv@v2
+
+  #     - name: Set up Python ${{ matrix.python-version }}
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: ${{matrix.python-version}}
+  #     - name: Install the project
+  #       run: uv sync --all-extras --dev
+
+  #     - name: Test with PyTest
+  #       env:
+  #         KERAS_BACKEND: ${{ matrix.backend }}
+  #       run: uv run -- pytest

@@ -1,0 +1,183 @@
+#================={ PROJECT CONFIGURATION }===================
+[project]
+name = "keras-tuner"
+description = "A Hyperparameter Tuning Library for Keras"
+readme = "README.md"
+license = { file = "LICENSE" }
+dynamic = ["version"]
+requires-python = ">=3.10"
+authors = [
+  { name = "The KerasTuner authors" },
+  { name = "Mah Neh", email = "mahneh8541@gmail.com" },
+]
+keywords = ["Hyperparameters", "Tuning", "Machine Learning"]
+
+#================={ DEPENDENCIES }===================
+dependencies = [
+  "requests>=2.32.3",
+  "protobuf>=4.25,<5.0",
+  "keras>=3.0",
+  "numpy<2",
+  "grpcio-tools>1.5,<1.66",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  # tested versions
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+
+[project.optional-dependencies]
+bayesian = ["scikit-learn>=1.5.2", "scipy>=1.14.1"]
+backends = ["jax[cpu]>=0.4.33", "tensorflow>=2.17"]
+tests = [
+  "ipython>=8.27.0",
+  "pandas>=2.2.3",
+  "portpicker>=1.6.0",
+  "pytest>=8.3.3",
+  "pytest-cov>=5.0.0",
+  "pytest-xdist>=3.6.1",
+  "scikit-learn>=1.5.2",
+  "scipy>=1.14.1",
+]
+dev = ["pre-commit>=3.8.0", "pyright>=1.1.381", "ruff>=0.6.6"]
+
+[project.urls]
+"Issue tracker" = "https://github.com/ghsanti/keras-tuner/issues"
+github = "https://github.com/ghsanti/keras-tuner"
+changelog = "https://github.com/ghsanti/keras-tuner/blob/master/CHANGELOG.md"
+
+
+#====================BUILDING============
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+path = "keras_tuner/__init__.py"
+
+#================={TOOLS}===================
+[tool.ruff]
+include = ["keras_tuner/**"]
+exclude = [
+  "shell",
+  "logs",
+  ".eggs",
+  ".git",
+  ".ipynb_checkpoints",
+  ".pyenv",
+  ".pytest_cache",
+  ".pytype",
+  ".ruff_cache",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "build",
+  "dist",
+  "node_modules",
+  "site-packages",
+  ".venv",
+  "*_pb2.py",
+  "*_pb2_grpc.py",
+  "keras_tuner/**/protos/**",
+]
+
+line-length = 80
+indent-width = 4
+target-version = "py310"
+
+[tool.pyright]
+include = ["keras_tuner"]
+exclude = ["keras_tuner/**/protos/**"]
+defineConstant = { DEBUG = true }
+stubPath = "keras_tuner/stubs"
+
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+
+pythonVersion = "3.10"
+
+[tool.ruff.lint] # for code best practices.
+
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+select = ['ALL']
+ignore = [
+  "E226",
+  "E24",
+  # Function name should be lowercase
+  "N802",
+  # Argument name should be lowercase
+  "N803",
+  # First argument of a method should be named
+  "N805",
+  # Argument name should be lowercase
+  "N806",
+  # lowercase ... imported as non lowercase
+  # Useful to ignore for "import keras.backend as K"
+  "N812",
+  # do not use bare 'except'
+  "E722",
+  # Escape characters check.
+  # Conflict with pytest error message regex.
+  "W605",
+  "T201",
+  "D203",
+  "D211",   # no blank line before class
+  "D213",   # multi line summary second line
+  "COM812",
+  "ISC001",
+  "T201",   # print statements.
+  "D107",   # un-documented init
+  "S311",   # insecure PRNG, we don't use it for encryption.
+  "PD011",  # should be moved to per-file-ignore if we start using pandas.
+]
+
+# Assume Python 3.8
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+[tool.ruff.lint.per-file-ignores]
+"keras_tuner/__init__.py" = ["E402", "F401", "EXE002"]
+"keras_tuner/**/{tests,docs,tools}/*" = ["E402"]
+"keras_tuner/**/*_test.py" = ["ALL"]
+"keras_tuner/types.py" = ["PYI049"]
+"keras_tuner/engine/oracle.py" = ["S311"]
+# no checks for test files for the moment.
+
+# skip return type for __init__, since it's always None.
+[tool.ruff.lint.flake8-annotations]
+mypy-init-return = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.pytest.ini_options]
+addopts = "-vv -p no:warnings --log-cli-level=CRITICAL --durations=10"
+# norecursedirs = "build"
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "@abstract", "raise NotImplementedError"]
+omit = [
+  "*test*",
+  "keras_tuner/**/protos/*",
+  "keras_tuner/**/distribute/file_utils.py",
+]
+
+[tool.uv.sources]
+torch = { url = "https://files.pythonhosted.org/packages/ea/ea/4ab009e953bca6ff35ad75b8ab58c0923308636c182c145dc63084f7d136/torch-2.4.1-cp311-cp311-manylinux1_x86_64.whl" }
