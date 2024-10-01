@@ -14,10 +14,11 @@
 
 
 from keras_tuner import utils
+import pytest
 
 
 def test_to_list_with_many_return_list():
-    many = [(1, 2, 3), "abc", 1, 1.0, "a", {"a": "b"}]
+    many = [(1, 2, 3), 1, 1.0]
     for item in many:
         result = utils.to_list(item)
         assert isinstance(result, list)
@@ -30,6 +31,11 @@ def test_to_list_with_many_return_list():
             assert result == [1]
         elif isinstance(item, float):
             assert result == [1.0]
+
+
+def test_to_list_throws():
+    with pytest.raises(TypeError):
+        utils.to_list("123")
 
 
 def test_try_clear_without_ipython():
