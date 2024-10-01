@@ -22,6 +22,7 @@ from keras_tuner.engine import metrics_tracking
 
 
 def test_register_from_metrics():
+    # register creates a map from name to `{dir, vals}`.
     # As well as direction inference.
     tracker = metrics_tracking.MetricsTracker(
         to_register=[metrics.CategoricalAccuracy(), metrics.MeanSquaredError()]
@@ -56,72 +57,32 @@ def test_exists():
 
 def test_update():
     tracker = metrics_tracking.MetricsTracker()
-    tracker.append_execution_value("new_metric", 0.5)  # automatic registration
+    tracker.append_execution("new_metric", 0.5)  # automatic registration
     assert set(tracker.metrics.keys()) == {"new_metric"}
     assert tracker.metrics["new_metric"].direction == "min"  # default direction
-    assert tracker.get_history("new_metric") == [
-        metrics_tracking.ExecutionMetric(0.5)
-    ]
+    assert tracker.metrics["new_metric"].metric_values == [[0.5]]
 
 
-def test_metric_observation_repr():
-    assert (
-        repr(metrics_tracking.ExecutionMetric(0.5))
-        == "ExecutionMetric(value=[0.5])"
-    )
-
-
-def test_get_history():
+def test_add_value():
     tracker = metrics_tracking.MetricsTracker()
     # note that each append is a new execution.
-    tracker.append_execution_value("new_metric", 0.5)
-    tracker.append_execution_value("new_metric", 1.5)
-    tracker.append_execution_value("new_metric", 2.0)
-    assert tracker.get_history("new_metric") == [
-        metrics_tracking.ExecutionMetric(0.5),
-        metrics_tracking.ExecutionMetric(1.5),
-        metrics_tracking.ExecutionMetric(2.0),
-    ]
-    with pytest.raises(ValueError, match="Unknown metric"):
-        tracker.get_history("another_metric")
+    tracker.append_execution("new_metric", 0.5)
+    tracker.append_execution("new_metric", 1.5)
+    tracker.append_execution("new_metric", 2.0)
+    assert tracker.metrics["new_metric"].metric_values == [[0.5], [1.5], [2.0]]
 
 
-def test_set_history_from_values():
+def test_add_list():
     tracker = metrics_tracking.MetricsTracker()
-    tracker.set_history_from_values(
+    tracker.append_execution(
         "new_metric",
         [
-            [
-                0.5,
-                1.5,
-                2.0,
-            ]
+            0.5,
+            1.5,
+            2.0,
         ],
     )
-    values = tracker.get_history("new_metric")
-    assert values == [
-        metrics_tracking.ExecutionMetric([0.5, 1.5, 2.0]),
-    ]
-
-
-def test_set_history():
-    tracker = metrics_tracking.MetricsTracker()
-    tracker.set_history(
-        "new_metric",
-        [
-            metrics_tracking.ExecutionMetric(
-                [
-                    0.5,
-                    1.5,
-                    2.0,
-                ]
-            )
-        ],
-    )
-    values = tracker.get_history("new_metric")
-    assert values == [
-        metrics_tracking.ExecutionMetric([0.5, 1.5, 2.0]),
-    ]
+    assert tracker.metrics["new_metric"].metric_values == [[0.5, 1.5, 2.0]]
 
 
 def test_get_best_step_value_none():
@@ -136,11 +97,11 @@ def test_get_best_value():
     tracker.register("metric_max", "max")
     assert tracker.get_best_overall_value_location("metric_min") is None
 
-    tracker.append_execution_value(
+    tracker.append_execution(
         "metric_min",
         [1.0, 2.0, 3.0],
     )
-    tracker.append_execution_value(
+    tracker.append_execution(
         "metric_max",
         [1.0, 2.0, 3.0],
     )
@@ -151,7 +112,7 @@ def test_get_best_value():
 def test_get_statistics():
     tracker = metrics_tracking.MetricsTracker()
     history = [random.random() for _ in range(10)]
-    tracker.append_execution_value("new_metric", history)
+    tracker.append_execution("new_metric", history)
     stats = tracker.get_statistics("new_metric")
     assert stats != None
     assert set(stats.keys()) == {"min", "max", "mean", "median", "var", "std"}
@@ -167,7 +128,7 @@ def test_get_last_value():
     tracker = metrics_tracking.MetricsTracker()
     tracker.register("new_metric", "min")
     assert tracker.get_last_execution_values("new_metric") is None
-    tracker.append_execution_value(
+    tracker.append_execution(
         "new_metric",
         [1.0, 2.0, 3.0],
     )
@@ -181,11 +142,11 @@ def test_serialization():
     tracker.register("metric_min", "min")
     tracker.register("metric_max", "max")
 
-    tracker.append_execution_value(
+    tracker.append_execution(
         "metric_min",
         [1.0, 2.0, 3.0],
     )
-    tracker.append_execution_value(
+    tracker.append_execution(
         "metric_max",
         [1.0, 2.0, 3.0],
     )
@@ -195,56 +156,37 @@ def test_serialization():
     assert new_tracker.metrics.keys() == tracker.metrics.keys()
 
 
-def test_metric_execution_proto_list():
-    obs = metrics_tracking.ExecutionMetric([-10, -20])
-    proto = obs.to_proto()
-    assert proto.value == [-10.0, -20]
-    new_obs = metrics_tracking.ExecutionMetric.from_proto(proto)
-    assert new_obs == obs
-
-
-def test_metric_execution():
-    obs = metrics_tracking.ExecutionMetric(-10)
-    proto = obs.to_proto()
-    assert proto.value == [-10]
-    new_obs = metrics_tracking.ExecutionMetric.from_proto(proto)
-    assert new_obs == obs
-
-
 def test_metric_history_proto():
     tracker = metrics_tracking.MetricHistory("max")
-    tracker.append_execution_from_values([5])
-    tracker.append_execution_from_values([10])
+    tracker.append_execution([5])
+    tracker.append_execution([10])
 
     proto = tracker.to_proto()
     assert proto.direction
-    assert proto.executions[0].value == [5]
-    assert proto.executions[1].value == [10]
+    assert proto.metric_values[0].value == [5]
+    assert proto.metric_values[1].value == [10]
 
     new_tracker = metrics_tracking.MetricHistory.from_proto(proto)
     assert new_tracker.direction == "max"
-    assert new_tracker.get_history() == [
-        metrics_tracking.ExecutionMetric(5),
-        metrics_tracking.ExecutionMetric(10),
-    ]
+    assert new_tracker.metric_values == [[5], [10]]
 
 
 def test_metrics_tracker_proto():
     tracker = metrics_tracking.MetricsTracker()
     tracker.register("score", direction="max")
-    tracker.append_execution_value("score", value=[10, 20])
-    tracker.append_execution_value("score", value=30)
+    tracker.append_execution("score", value=[10, 20])
+    tracker.append_execution("score", value=30)
 
     proto = tracker.to_proto()
-    executions = proto.metrics["score"].executions
+    executions = proto.metrics["score"].metric_values
     assert executions[0].value == [10, 20]
     assert executions[1].value == [30]
     assert proto.metrics["score"].direction
     new_tracker = metrics_tracking.MetricsTracker.from_proto(proto)
     assert new_tracker.metrics["score"].direction == "max"
-    assert new_tracker.metrics["score"].get_history() == [
-        metrics_tracking.ExecutionMetric([10, 20]),
-        metrics_tracking.ExecutionMetric(30),
+    assert new_tracker.metrics["score"].metric_values == [
+        [10, 20],
+        [30],
     ]
 
 

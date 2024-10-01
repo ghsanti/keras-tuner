@@ -39,10 +39,11 @@ if TYPE_CHECKING:
         _KerasMetric,
         _MetricDirection,
         _MetricHistoryConfig,
+        _MetricNameToHistory,
         _MetricStats,
+        _MetricsTrackerInput,
+        _MetricsTrackerInputs,
         _MetricTrackerConfig,
-        _MetricValues,
-        _WhichExecutionValues,
     )
 else:
     _FloatList = Any
@@ -54,6 +55,15 @@ else:
     _KerasMetric = Any
     _WhichExecutionValues = Any
     _MetricValues = Any
+    _MetricNameToHistory = Any
+    _MetricsTrackerInput = Any
+    _MetricsTrackerInputs = Any
+    _Model = Any
+
+
+class ExecutionMetric:
+    def __init__(self, values: _FloatList | None) -> None:
+        self.values: _FloatList | None = values
 
 
 class MetricHistory:
@@ -79,8 +89,8 @@ class MetricHistory:
         # used for quick comparison.
         self.metric_values: list[_FloatList] = metric_values or []
 
-    def append_execution_from_values(self, new_values: _FloatList) -> None:
-        """Append ExecutionMetric instance with `value` to list of results."""
+    def append_execution(self, new_values: _FloatList) -> None:
+        """Append `new_values` to list of results."""
         values = [float(v) for v in new_values]
         self.metric_values.append(values)
 
@@ -92,7 +102,7 @@ class MetricHistory:
     def get_best_value(self) -> float | None:
         """Return the best values."""
         if len(self.metric_values) > 0:
-            reduce_fn = np.nanmean if self.direction == "min" else np.nanmax
+            reduce_fn = np.nanmin if self.direction == "min" else np.nanmax
 
             return float(reduce_fn(self.metric_values, axis=(0, 1)))
         return None
@@ -114,10 +124,9 @@ class MetricHistory:
         if best_value is None:
             return None
 
-        all_values = self.metric_values
-        if all_values is None:
+        if self.metric_values is None:
             return None
-        for exec_idx, values in enumerate(all_values):
+        for exec_idx, values in enumerate(self.metric_values):
             for val_idx, value in enumerate(values):
                 if value == best_value:
                     return (exec_idx, val_idx)
@@ -175,7 +184,9 @@ class MetricHistory:
         Mh = proto.MetricHistory  # type: ignore  # noqa: PGH003
         # must match order and name in proto.
         return Mh(
-            metric_values=self.metric_values,
+            metric_values=[
+                proto.ExecutionMetric(value=v) for v in self.metric_values
+            ],
             direction=self.direction,
         )
 
@@ -190,16 +201,12 @@ class MetricHistory:
         """
         if hasattr(proto, "direction"):
             direction = "max" if proto.direction == "max" else "min"
+            # this matches the interface of MetricHistory and ExecutionMetric.
             metric_values = [v.value for v in proto.metric_values]
             return cls(direction=direction, metric_values=metric_values)  # type: ignore  # noqa: PGH003
 
         msg = "Both 'direction' and 'executions' must be defined in proto."
         raise TypeError(msg)
-
-
-_MetricNameToHistory = dict[str, "MetricHistory"]
-_MetricsTrackerInput = _KerasMetric | Callable | _MetricNameToHistory
-_MetricsTrackerInputs = list[_MetricsTrackerInput]
 
 
 class MetricsTracker:
@@ -302,10 +309,10 @@ class MetricsTracker:
         self._assert_exists(metric_name)
         return self.metrics[metric_name].get_statistics()
 
-    def append_execution_value(
+    def append_execution(
         self, metric_name: str, value: _FloatListOrFloat
     ) -> None:
-        """Append ExecutionMetric to a specific Metric, from its values."""
+        """Append `value` to a specific Metric by name."""
         value = (
             [float(v) for v in value]
             if isinstance(value, list)
@@ -314,7 +321,7 @@ class MetricsTracker:
         if not self.exists(metric_name):
             self.register(metric_name)
 
-        self.metrics[metric_name].append_execution_from_values(value)
+        self.metrics[metric_name].append_execution(value)
 
     def get_config(self) -> _MetricTrackerConfig:
         """Get dictionary of metric names to MetricHistoryConfig data."""

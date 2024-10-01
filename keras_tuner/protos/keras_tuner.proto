@@ -90,12 +90,14 @@ message HyperParameters {
     Values values = 2;
 }
 
+// note that his is needed because protobuffer
+// does not support nested lists in MetricHistory. (or elsewhere.)
 message ExecutionMetric {
     repeated double value = 1 [packed=true];
 }
 
 message MetricHistory {
-    repeated ExecutionMetric executions = 1;
+    repeated ExecutionMetric metric_values = 1;
     string direction = 2;
 }
 
