@@ -100,14 +100,12 @@ def load_json(path: str) -> object:
     return json.loads(obj_str)
 
 
-def to_list(values: _NumberValues | str | tuple | list | object) -> list:
+def to_list(values: _NumberValues | tuple | list) -> list:
     """Get tuple or numeric value into list. Lists are left unchanged."""
-    if isinstance(values, list):
-        return values
-    if isinstance(values, int | float | str):
+    if isinstance(values, int | float):
         return [values]
-    try:  # protobuffer repeated.
+    if isinstance(values, list | tuple):
         return list(values)  # type: ignore  # noqa: PGH003
-    except:
-        msg = f"Can not convert values of type {type(values)} to list."
-        raise TypeError(msg) from None
+
+    msg = f"Can not convert values of type {type(values)} to list."
+    raise TypeError(msg) from None

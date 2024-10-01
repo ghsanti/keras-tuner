@@ -3,7 +3,6 @@
 from typing import Literal, TypedDict
 
 import keras
-import numpy as np
 from keras.api.losses import Loss
 from keras.api.metrics import Metric
 
@@ -16,10 +15,13 @@ from .engine.objective import (
 # basic types
 _FloatList = list[float]
 _FloatListOrFloat = float | _FloatList
-_NumberValues = int | float | np.floating
+_NumberValues = int | float
 
 
 # Metrics types
+_WhichExecutionValues = Literal["all", "best", "last"]
+
+
 class _MetricStats(TypedDict):
     min: float
     max: float
@@ -30,6 +32,7 @@ class _MetricStats(TypedDict):
 
 
 _MetricDirection = Literal["min", "max"]
+_MetricValues = list[_FloatList]
 
 
 class _MetricHistoryConfig(TypedDict):

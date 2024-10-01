@@ -18,13 +18,9 @@
 * To and from proto
 * Utilities.
 
-The way protos work is that each python class maps (roughly) to a proto class.
+For "protos", each class.__init__ maps -roughly- to a proto class.
 
 """
-
-# Comment about Typing
-# Note that type["ClassName"] is the class object itself.
-# and "ClassName" is the instance.
 
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
@@ -35,7 +31,6 @@ from keras.api.losses import Loss
 from keras.api.metrics import Metric
 
 from keras_tuner.protos import keras_tuner_pb2 as proto
-from keras_tuner.utils import to_list
 
 if TYPE_CHECKING:
     from keras_tuner.types import (
@@ -46,6 +41,8 @@ if TYPE_CHECKING:
         _MetricHistoryConfig,
         _MetricStats,
         _MetricTrackerConfig,
+        _MetricValues,
+        _WhichExecutionValues,
     )
 else:
     _FloatList = Any
@@ -55,50 +52,8 @@ else:
     _MetricStats = Any
     _MetricTrackerConfig = Any
     _KerasMetric = Any
-
-
-class ExecutionMetric:
-    """Metric value at a given execution.
-
-    It aggregates multiple steps using `append`.
-
-    Args:
-        value: The evaluated metric values.
-
-    """
-
-    def __init__(
-        self,
-        value: _FloatListOrFloat,
-    ):
-        self.value: _FloatList = to_list(value)
-
-    def append(self, value: _FloatListOrFloat) -> None:
-        """Extend list of results with a value(s)."""
-        self.value.extend(to_list(value))
-
-    def __eq__(self, other: object) -> bool:
-        """Check if objects have the same value or not."""
-        return (
-            other.value == self.value
-            if isinstance(other, ExecutionMetric)
-            else False
-        )
-
-    def __repr__(self) -> str:
-        """Stringify class instance."""
-        return f"ExecutionMetric(value={self.value})"
-
-    def to_proto(self) -> object:
-        """Pass value to proto."""
-        return proto.ExecutionMetric(value=self.value)
-
-    @classmethod
-    def from_proto(
-        cls: type["ExecutionMetric"], proto: object
-    ) -> "ExecutionMetric":
-        """Class instance from proto value."""
-        return cls(value=proto.value)
+    _WhichExecutionValues = Any
+    _MetricValues = Any
 
 
 class MetricHistory:
@@ -115,48 +70,32 @@ class MetricHistory:
     def __init__(
         self,
         direction: _MetricDirection = "min",
-        executions: "list[ExecutionMetric] | None" = None,
+        metric_values: "list[_FloatList] | None" = None,
     ):
         if direction not in {"min", "max"}:
             msg = f"`direction` should be one of min|max, but got: {direction}"
             raise ValueError(msg)
         self.direction = direction
         # used for quick comparison.
-        self._executions: list[ExecutionMetric] = executions or []
+        self.metric_values: list[_FloatList] = metric_values or []
 
-    def get_executions_values(self) -> list[_FloatList]:
-        """Return the values of all executions for this metric."""
-        if len(self._executions) > 0:
-            return [execution.value for execution in self._executions]
-        return []
-
-    def get_last_execution_values(self) -> _FloatList | None:
-        """Get the last execution values (not a single value)."""
-        values = self.get_executions_values()
-        if isinstance(values, list) and len(values) != 0:
-            return values[-1]
-        return None
-
-    def append_execution_from_values(self, value: _FloatList) -> None:
+    def append_execution_from_values(self, new_values: _FloatList) -> None:
         """Append ExecutionMetric instance with `value` to list of results."""
-        values = [float(v) for v in value]
-        self._executions.append(ExecutionMetric(values))
+        values = [float(v) for v in new_values]
+        self.metric_values.append(values)
 
-    def get_best_overall_value(self) -> float | None:
-        """Best overall value on this metric's history.
+    def get_last_values(self) -> _FloatList | None:
+        """Return the last values."""
+        return self.metric_values[-1] if len(self.metric_values) else None
 
-        Returns:
-            Best of the last values or None.
+    # BEST VALUE and BEST LOCATION OF VALUE.
+    def get_best_value(self) -> float | None:
+        """Return the best values."""
+        if len(self.metric_values) > 0:
+            reduce_fn = np.nanmean if self.direction == "min" else np.nanmax
 
-        """
-        all_values = self.get_executions_values()
-
-        if not all_values:  # won't be best neither.
-            return None
-
-        reduce_fn = np.nanmin if self.direction == "min" else np.nanmax
-
-        return float(reduce_fn(all_values, axis=(0, 1)))
+            return float(reduce_fn(self.metric_values, axis=(0, 1)))
+        return None
 
     def get_best_location(
         self, best_value: float | None = None
@@ -164,43 +103,48 @@ class MetricHistory:
         """Get the location or (exec, epoch) tuple of the best value.
 
         Args:
-        best_value: Optional float. Otherwise it calculates the best. Before
-        finding the index.
+            best_value: Optional. Otherwise it calculates the best before
+            finding the index.
 
         """
         best_value = (
-            best_value
-            if best_value is not None
-            else self.get_best_overall_value()
+            best_value if best_value is not None else self.get_best_value()
         )
 
         if best_value is None:
             return None
 
-        for exec_idx, values in enumerate(self.get_executions_values()):
+        all_values = self.metric_values
+        if all_values is None:
+            return None
+        for exec_idx, values in enumerate(all_values):
             for val_idx, value in enumerate(values):
                 if value == best_value:
                     return (exec_idx, val_idx)
         msg = "Best value was not found so the indices can't be determined."
         raise ValueError(msg)
 
-    def get_history(self) -> list[ExecutionMetric]:
-        """List of ExecutionMetric for this Metric."""
-        return self._executions
+    # BEST AVERAGE TOOLS
+    def get_execution_averages(self) -> _FloatList | None:
+        """Return same-epoch averages, across all executions."""
+        if len(self.metric_values) > 0:
+            return np.nanmean(self.metric_values, axis=(1))
+        return None
 
-    def set_history(self, vals: list[ExecutionMetric]) -> None:
-        """Set list of ExecutionMetrics."""
-        self._executions = vals
+    def get_best_average_value_and_epoch(self) -> tuple[int, float] | None:
+        """Best average value and its epoch."""
+        averages = self.get_execution_averages()
+        if averages is None:
+            return None
 
-    def set_history_from_values(self, vals: list[_FloatList]) -> None:
-        """Set list of ExecutionMetrics from execution values."""
-        self._executions = []
-        for item in vals:
-            self._executions.append(ExecutionMetric(item))
+        reduce_fn = np.nanargmin if self.direction == "min" else np.nanargmax
+        index = reduce_fn(averages, axis=0)
+        averages_value = float(averages[index])
+        return (index, averages_value)
 
     def get_statistics(self) -> _MetricStats | None:
         """Get the summary statistics of executions for this Metric."""
-        values = self.get_executions_values()
+        values = self.metric_values
         if len(values) != 0:
             return {
                 "min": float(np.nanmin(values, (0, 1))),
@@ -216,7 +160,7 @@ class MetricHistory:
         """Make dict with directions and executions values."""
         return {
             "direction": cast(_MetricDirection, self.direction),
-            "executions": [obs.value for obs in self.get_history()],
+            "executions": self.metric_values,
         }
 
     @classmethod
@@ -224,16 +168,14 @@ class MetricHistory:
         cls: type["MetricHistory"], config: _MetricHistoryConfig
     ) -> "MetricHistory":
         """Create a MetricHistory from a configuration dictionary."""
-        instance = cls(config["direction"])
-        instance.set_history_from_values(config["executions"])
-        return instance
+        return cls(config["direction"], config["executions"])
 
     def to_proto(self) -> object:
         """Create a 'Mh' protobuffer from a MetricHistory instance (self)."""
         Mh = proto.MetricHistory  # type: ignore  # noqa: PGH003
         # must match order and name in proto.
         return Mh(
-            executions=[obs.to_proto() for obs in self.get_history()],
+            metric_values=self.metric_values,
             direction=self.direction,
         )
 
@@ -241,11 +183,15 @@ class MetricHistory:
     def from_proto(
         cls: type["MetricHistory"], proto: object
     ) -> "MetricHistory":
-        """Create MetricHistory instance from proto."""
+        """Create MetricHistory instance from proto.
+
+        The `v.value` is due to inability of protobuffer to store
+        nested lists.
+        """
         if hasattr(proto, "direction"):
             direction = "max" if proto.direction == "max" else "min"
-            class_execs = [ExecutionMetric(v.value) for v in proto.executions]
-            return cls(direction=direction, executions=class_execs)  # type: ignore  # noqa: PGH003
+            metric_values = [v.value for v in proto.metric_values]
+            return cls(direction=direction, metric_values=metric_values)  # type: ignore  # noqa: PGH003
 
         msg = "Both 'direction' and 'executions' must be defined in proto."
         raise TypeError(msg)
@@ -289,8 +235,10 @@ class MetricsTracker:
             if isinstance(metric, dict):
                 for name, history in metric.items():
                     if isinstance(history, MetricHistory):
-                        self.register(metric, history.direction)
-                        self.set_history(name, history.get_history())
+                        self.register(
+                            metric, cast(_MetricDirection, history.direction)
+                        )
+                        self.metrics[name].metric_values = history.metric_values
                         is_registered = True
             if not is_registered:
                 self.register(metric)
@@ -298,7 +246,7 @@ class MetricsTracker:
     def register(
         self,
         metric: _MetricsTrackerInput | str,
-        direction: str | None = None,
+        direction: _MetricDirection | None = None,
     ) -> None:
         """Register a metric in the metrics dictionary.
 
@@ -335,7 +283,7 @@ class MetricsTracker:
     def get_best_overall_value(self, metric_name: str) -> float | None:
         """Get the single best value of a chosen metric."""
         self._assert_exists(metric_name)
-        return self.metrics[metric_name].get_best_overall_value()
+        return self.metrics[metric_name].get_best_value()
 
     def get_best_overall_value_location(
         self, metric_name: str
@@ -347,7 +295,7 @@ class MetricsTracker:
     def get_last_execution_values(self, metric_name: str) -> _FloatList | None:
         """Get the last execution **values** for a chosen metric."""
         self._assert_exists(metric_name)
-        return self.metrics[metric_name].get_last_execution_values()
+        return self.metrics[metric_name].get_last_values()
 
     def get_statistics(self, metric_name: str) -> _MetricStats | None:
         """Get the statistics for a chosen metric."""
@@ -367,37 +315,6 @@ class MetricsTracker:
             self.register(metric_name)
 
         self.metrics[metric_name].append_execution_from_values(value)
-
-    def set_history_from_values(
-        self, metric_name: str, value: list[_FloatList]
-    ) -> None:
-        """Create and append ExecutionMetric to a specific Metric."""
-        if not self.exists(metric_name):
-            self.register(metric_name)
-        for v in value:
-            if not isinstance(v, list):
-                msg = "Expected nested list but got {type(v)}"
-                raise TypeError(msg)
-
-        self.metrics[metric_name].set_history_from_values(value)
-
-    def set_history(
-        self, metric_name: str, value: list[ExecutionMetric]
-    ) -> None:
-        """Append ExecutionMetric to a specific Metric, from its values."""
-        if not self.exists(metric_name):
-            self.register(metric_name)
-        for v in value:
-            if not isinstance(v, ExecutionMetric):
-                msg = "Expected nested list but got {type(v)}"
-                raise TypeError(msg)
-
-        self.metrics[metric_name].set_history(value)
-
-    def get_history(self, metric_name: str) -> list[ExecutionMetric]:
-        """Get the history of a chosen metric."""
-        self._assert_exists(metric_name)
-        return self.metrics[metric_name].get_history()
 
     def get_config(self) -> _MetricTrackerConfig:
         """Get dictionary of metric names to MetricHistoryConfig data."""
