@@ -95,7 +95,7 @@ indent-width = 4
 target-version = "py310"
 
 [tool.pyright]
-include = ["keras_tuner"]
+include = ["keras_tuner/"]
 exclude = ["keras_tuner/protos/**"]
 defineConstant = { DEBUG = true }
 # stubPath = "keras_tuner/stubs"
