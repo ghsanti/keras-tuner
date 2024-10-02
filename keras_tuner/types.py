@@ -1,69 +1,51 @@
 """Application's common types."""
 
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from collections.abc import Callable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    TypeAlias,
+    TypedDict,
+)
+
+import keras
+from keras.api.losses import Loss
+from keras.api.metrics import Metric
 
 if TYPE_CHECKING:
-    import keras
-    from keras.api.losses import Loss
-    from keras.api.metrics import Metric
-
-    from keras_tuner.engine.metrics_tracking import MetricHistory
-
+    from .engine.metrics_tracking import MetricHistory
     from .engine.objective import (
         DefaultObjective,
         MultiObjective,
         Objective,
     )
 else:
-    Loss = Any
-    Metric = Any
+    MetricHistory = Any
+    DefaultObjective = Any
     MultiObjective = Any
     Objective = Any
-    DefaultObjective = Any
-    keras = Any
-    _FloatList = Any
-    _FloatListOrFloat = Any
-    _NumberValues = Any
-    _WhichExecutionValues = Any
-    _MetricStats = Any
-    _MetricDirection = Any
-    _MetricValues = Any
-    _MetricNameToHistory = Any
-    _MetricsTrackerInput = Any
-    _MetricsTrackerInputs = Any
-    _MetricHistoryConfig = Any
-    _MetricTrackerConfig = Any
-    _Verbose = Any
-    _EpochLogs = Any
-    _Model = Any
-    _KerasMetric = Any
-    _SomeObjectiveOrName = Any
-    HyperModel = Any
-    HyperParameters = Any
-    _AllObjectives = Any
-    _FloatList = Any
-    _FloatListOrFloat = Any
-    _NumberValues = Any
-    _WhichExecutionValues = Any
 
 
-# KERAS specific
-_Model = keras.models.Model | keras.models.Sequential
-_KerasMetric = Loss | Metric
-_kerasLoss = keras.Loss | str
-_kerasMetric = keras.Metric | str
-_kerasOptimizer = str | keras.Optimizer
+# ===============================Custom Types=====
 
-# basic types
-_FloatList = list[float]
-_FloatListOrFloat = float | _FloatList
-_NumberValues = int | float
+# All the types can be imported without blocking.
+# Since they are type aliases.
+
+# KERAS
+_Model: TypeAlias = keras.models.Model | keras.models.Sequential
+_KerasMetric: TypeAlias = Loss | Metric
+_kerasLoss: TypeAlias = keras.Loss | str
+_kerasMetric: TypeAlias = keras.Metric | str
+_kerasOptimizer: TypeAlias = str | keras.Optimizer
+
+# Basic
+_FloatList: TypeAlias = list[float]
+_FloatListOrFloat: TypeAlias = float | _FloatList
+_NumberValues: TypeAlias = int | float
 
 
-# Metrics types
-_WhichExecutionValues = Literal["all", "best", "last"]
-
-
+# Metrics
 class _MetricStats(TypedDict):
     min: float
     max: float
@@ -73,13 +55,13 @@ class _MetricStats(TypedDict):
     median: float
 
 
-_MetricDirection = Literal["min", "max"]
-_MetricValues = list[_FloatList]
+_MetricDirection: TypeAlias = Literal["min", "max"]
+_MetricValues: TypeAlias = list[_FloatList]
 
 
-_MetricNameToHistory = dict[str, "MetricHistory"]
-_MetricsTrackerInput = _KerasMetric | Callable | _MetricNameToHistory
-_MetricsTrackerInputs = list[_MetricsTrackerInput]
+_MetricNameToHistory: TypeAlias = dict[str, "MetricHistory"]
+_MetricsTrackerInput: TypeAlias = _KerasMetric | Callable | _MetricNameToHistory
+_MetricsTrackerInputs: TypeAlias = list[_MetricsTrackerInput]
 
 
 class _MetricHistoryConfig(TypedDict):
@@ -87,18 +69,18 @@ class _MetricHistoryConfig(TypedDict):
     executions: list[_FloatList]
 
 
-_MetricTrackerConfig = dict[str, _MetricHistoryConfig]
-_Verbose = Literal["auto"] | int
+_MetricTrackerConfig: TypeAlias = dict[str, _MetricHistoryConfig]
+_Verbose: TypeAlias = Literal["auto"] | int
 
-_EpochLogs = dict[str, float]
+_EpochLogs: TypeAlias = dict[str, float]
 
 
 # Main Output type.
-_TrialResult = _NumberValues | dict | keras.callbacks.History
-_SupportedTrialResults = list[_TrialResult] | _TrialResult
+_TrialResult: TypeAlias = _NumberValues | dict | keras.callbacks.History
+_SupportedTrialResults: TypeAlias = list[_TrialResult] | _TrialResult
 
 
-_SomeObjective = DefaultObjective | MultiObjective | Objective
-_SomeObjectiveOrName = _SomeObjective | str
+_SomeObjective: TypeAlias = DefaultObjective | MultiObjective | Objective
+_SomeObjectiveOrName: TypeAlias = _SomeObjective | str
 
-_AllObjectives = _SomeObjectiveOrName | list[_SomeObjectiveOrName]
+_AllObjectives: TypeAlias = _SomeObjectiveOrName | list[_SomeObjectiveOrName]

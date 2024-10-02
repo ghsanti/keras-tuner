@@ -106,6 +106,5 @@ def to_list(values: _NumberValues | tuple | list) -> list:
         return [values]
     if isinstance(values, list | tuple):
         return list(values)  # type: ignore  # noqa: PGH003
-
     msg = f"Can not convert values of type {type(values)} to list."
     raise TypeError(msg) from None

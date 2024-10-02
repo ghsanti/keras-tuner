@@ -18,12 +18,10 @@
 * To and from proto
 * Utilities.
 
-For "protos", each class.__init__ maps -roughly- to a proto class.
-
 """
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, cast
+from typing import cast
 
 import keras
 import numpy as np
@@ -32,33 +30,18 @@ from keras.api.metrics import Metric
 
 from keras_tuner.protos import keras_tuner_pb2 as proto
 
-if TYPE_CHECKING:
-    from keras_tuner.types import (
-        _FloatList,
-        _FloatListOrFloat,
-        _KerasMetric,
-        _MetricDirection,
-        _MetricHistoryConfig,
-        _MetricNameToHistory,
-        _MetricStats,
-        _MetricsTrackerInput,
-        _MetricsTrackerInputs,
-        _MetricTrackerConfig,
-    )
-else:
-    _FloatList = Any
-    _FloatListOrFloat = Any
-    _MetricDirection = Any
-    _MetricHistoryConfig = Any
-    _MetricStats = Any
-    _MetricTrackerConfig = Any
-    _KerasMetric = Any
-    _WhichExecutionValues = Any
-    _MetricValues = Any
-    _MetricNameToHistory = Any
-    _MetricsTrackerInput = Any
-    _MetricsTrackerInputs = Any
-    _Model = Any
+# All type aliases.
+from keras_tuner.types import (
+    _FloatList,
+    _FloatListOrFloat,
+    _MetricDirection,
+    _MetricHistoryConfig,
+    _MetricNameToHistory,
+    _MetricStats,
+    _MetricsTrackerInput,
+    _MetricsTrackerInputs,
+    _MetricTrackerConfig,
+)
 
 
 class ExecutionMetric:
@@ -80,7 +63,7 @@ class MetricHistory:
     def __init__(
         self,
         direction: _MetricDirection = "min",
-        metric_values: "list[_FloatList] | None" = None,
+        metric_values: list[_FloatList] | None = None,
     ):
         if direction not in {"min", "max"}:
             msg = f"`direction` should be one of min|max, but got: {direction}"
@@ -353,8 +336,16 @@ class MetricsTracker:
         )
 
     @classmethod
-    def from_proto(cls, proto: object) -> "MetricsTracker":
-        """Create a MetricsTracker instance from a proto."""
+    def from_proto(
+        cls: type["MetricsTracker"], proto: object
+    ) -> "MetricsTracker":
+        """Create a MetricsTracker instance from a proto.
+
+        Args:
+            cls: MetricsTracker class.
+            proto: proto.MetricsTracker.
+
+        """
         metrics: _MetricsTrackerInputs = [
             {name: MetricHistory.from_proto(proto.metrics[name])}
             for name in list(proto.metrics.keys())
@@ -390,6 +381,9 @@ _MAX_METRIC_FNS = (
     "binary_accuracy",
     "sparse_categorical_accuracy",
 )
+
+
+# to be improved.
 
 
 def infer_metric_direction(metric: str) -> _MetricDirection | None:
