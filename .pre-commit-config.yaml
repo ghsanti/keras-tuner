@@ -22,3 +22,4 @@ repos:
     hooks:
       # Check for Type Errors.
       - id: pyright
+        always-run: true
