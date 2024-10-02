@@ -4,6 +4,7 @@
 ![py-version](https://img.shields.io/badge/Python-3.10+-blue)
 [![tests](https://github.com/keras-team/keras-tuner/workflows/Tests/badge.svg?branch=master)](https://github.com/keras-team/ghsanti/actions?query=workflow%3ATests+branch%3Amaster)
 [![codecov](https://codecov.io/gh/ghsanti/keras-tuner/branch/master/graph/badge.svg)](https://codecov.io/gh/ghsanti/keras-tuner)
+[![pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 
 [![jax](https://img.shields.io/badge/jax-blue)](https://github.com/jax-ml/jax)
 [![tf](https://img.shields.io/badge/tensorflow-yellow)](https://github.com/tensorflow/tensorflow)

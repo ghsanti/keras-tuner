@@ -96,9 +96,9 @@ target-version = "py310"
 
 [tool.pyright]
 include = ["keras_tuner"]
-exclude = ["keras_tuner/**/protos/**"]
+exclude = ["keras_tuner/protos/**"]
 defineConstant = { DEBUG = true }
-stubPath = "keras_tuner/stubs"
+# stubPath = "keras_tuner/stubs"
 
 reportMissingImports = "error"
 reportMissingTypeStubs = false
