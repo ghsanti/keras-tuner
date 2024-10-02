@@ -22,4 +22,3 @@ repos:
     hooks:
       # Check for Type Errors.
       - id: pyright
-        args: [--all-files]
