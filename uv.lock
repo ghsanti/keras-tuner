@@ -498,7 +498,7 @@ wheels = [
 
 [[package]]
 name = "keras-tuner"
-version = "2.0.0"
+version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "grpcio-tools" },
@@ -544,7 +544,7 @@ requires-dist = [
     { name = "portpicker", marker = "extra == 'tests'", specifier = ">=1.6.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.8.0" },
     { name = "protobuf", specifier = ">=4.25,<5.0" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.381" },
+    { name = "pyright", extras = ["nodejs"], marker = "extra == 'dev'", specifier = ">=1.1.381" },
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=8.3.3" },
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=5.0.0" },
     { name = "pytest-xdist", marker = "extra == 'tests'", specifier = ">=3.6.1" },

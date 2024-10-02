@@ -1,20 +1,22 @@
 # KerasTuner
 
-[![license](https://img.shields.io/badge/License-Apache_2.0-green)](https://github.com/ghsanti/keras-tuner/blob/master/LICENSE)
+[![license](https://img.shields.io/badge/License-Apache_2.0-green)](https://github.com/ghsanti/keras-tuner/blob/main/LICENSE)
 ![py-version](https://img.shields.io/badge/Python-3.10+-blue)
-[![tests](https://github.com/keras-team/keras-tuner/workflows/Tests/badge.svg?branch=master)](https://github.com/keras-team/ghsanti/actions?query=workflow%3ATests+branch%3Amaster)
-[![codecov](https://codecov.io/gh/ghsanti/keras-tuner/branch/master/graph/badge.svg)](https://codecov.io/gh/ghsanti/keras-tuner)
-[![pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
+[![tests](https://github.com/keras-team/keras-tuner/workflows/Tests/badge.svg?branch=main)](https://github.com/keras-team/ghsanti/actions?query=workflow%3ATests+branch%3Amain)
+[![codecov](https://codecov.io/gh/ghsanti/keras-tuner/branch/main/graph/badge.svg)](https://codecov.io/gh/ghsanti/keras-tuner)
+![pyright](https://img.shields.io/badge/pyright-blue)
+![ruff](https://img.shields.io/badge/ruff-orange)
+![pre-commit](https://img.shields.io/badge/pre_commit-green)
 
 [![jax](https://img.shields.io/badge/jax-blue)](https://github.com/jax-ml/jax)
 [![tf](https://img.shields.io/badge/tensorflow-yellow)](https://github.com/tensorflow/tensorflow)
 [![pytorch](https://img.shields.io/badge/pytorch-orange)](https://github.com/pytorch/pytorch)
 
-Personal fork of the great [KerasTuner: Original Repo](https://github.com/keras-team/keras-tuner). Feel free to try it out.
+Personal fork of the great [KerasTuner: Original Repo](https://github.com/keras-team/keras-tuner).
 
 ## Install
 
-Check out to Codespace, or install locally:
+Check out to a codespace, or install locally:
 
 ```bash
 pip install git+https://github.com/ghsanti/keras-tuner
@@ -27,7 +29,7 @@ Try [example.py](https://github.com/ghsanti/keras-tuner/blob/master/example.py) 
 <summary>
 Main Changes
 </summary>
-- Detailed results and type annotations (some.)
+- Detailed results and type annotations
 </details>
 
 <details>

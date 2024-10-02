@@ -1,6 +1,7 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0 # Use the ref you want to point at
+    # basic checks
     hooks:
       - id: check-json
       - id: check-toml
@@ -10,16 +11,14 @@ repos:
       - id: trailing-whitespace
       - id: name-tests-test
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
     rev: v0.6.5
     hooks:
-      # Run the linter.
+      # check for syntax errors and improve formatting
       - id: ruff
         args: [check, --select, I, --fix]
-      # Run the formatter.
       - id: ruff-format
-        # args: [--config, format.line-ending = 'lf']
   - repo: https://github.com/RobertCraigie/pyright-python
     rev: v1.1.383
     hooks:
+      # Check for Type Errors.
       - id: pyright

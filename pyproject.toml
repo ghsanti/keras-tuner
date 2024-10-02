@@ -45,7 +45,11 @@ tests = [
   "scikit-learn>=1.5.2",
   "scipy>=1.14.1",
 ]
-dev = ["pre-commit>=3.8.0", "pyright>=1.1.381", "ruff>=0.6.6"]
+dev = [
+    "pre-commit>=3.8.0",
+    "pyright[nodejs]>=1.1.381",
+    "ruff>=0.6.6",
+]
 
 [project.urls]
 "Issue tracker" = "https://github.com/ghsanti/keras-tuner/issues"
@@ -96,19 +100,17 @@ target-version = "py310"
 
 [tool.pyright]
 include = ["keras_tuner/**"]
-exclude = ["keras_tuner/protos/**"]
+exclude = ["keras_tuner/protos/**", "keras_tuner/**/*_test.py"]
 defineConstant = { DEBUG = true }
 # stubPath = "keras_tuner/stubs"
-
 reportMissingImports = "error"
 reportMissingTypeStubs = false
-
 pythonVersion = "3.10"
+venvPath = "."
+venv = ".venv"
 
 [tool.ruff.lint] # for code best practices.
-
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-
 select = ['ALL']
 ignore = [
   "E226",
@@ -180,4 +182,5 @@ omit = [
 ]
 
 [tool.uv.sources]
+#  enriches the dependency metadata with additional sources
 torch = { url = "https://files.pythonhosted.org/packages/ea/ea/4ab009e953bca6ff35ad75b8ab58c0923308636c182c145dc63084f7d136/torch-2.4.1-cp311-cp311-manylinux1_x86_64.whl" }

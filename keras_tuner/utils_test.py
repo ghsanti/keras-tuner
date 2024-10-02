@@ -35,7 +35,7 @@ def test_to_list_with_many_return_list():
 
 def test_to_list_throws():
     with pytest.raises(TypeError):
-        utils.to_list("123")
+        utils.to_list("123")  # type: ignore (we want to test type error.)
 
 
 def test_try_clear_without_ipython():
