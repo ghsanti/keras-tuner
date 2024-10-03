@@ -867,25 +867,25 @@ class Display(stateful.Stateful):
             )
             print(f"Total elapsed time: {time_elapsed_str}")
 
-    def show_hyperparameter_table(self, trial: Trial) -> None:
+    def show_hyperparameter_table(self, current_trial: Trial) -> None:
         """Summary table with parameters and best values."""
         template = f"{{0:{self.col_width}}}|{{1:{self.col_width}}}|{{2}}"
         best_trials = self.oracle.get_best_trials()
         best_trial = best_trials[0] if len(best_trials) > 0 else None
-        if trial.hyperparameters.values:
+        if current_trial.hyperparameters:
             print(
                 template.format("Value", "Best Value So Far", "Hyperparameter")
             )
-            for hp, value in trial.hyperparameters.values.items():
+            for hp, value in current_trial.hyperparameters.values.items():
                 best_value = (
                     best_trial.hyperparameters.values.get(hp)
-                    if best_trial
-                    else "?"
+                    if best_trial and best_trial.hyperparameters
+                    else None
                 )
                 print(
                     template.format(
                         self.format_value(value),
-                        self.format_value(best_value),
+                        self.format_value(best_value or "?"),
                         hp,
                     )
                 )
