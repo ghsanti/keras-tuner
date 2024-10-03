@@ -419,7 +419,7 @@ class Oracle(stateful.Stateful):
                         self.objective, metric_name
                     )
                     trial.metrics.register(metric_name, direction=direction)
-                trial.metrics.append_execution_value(metric_name, metric_value)
+                trial.metrics.append_execution(metric_name, metric_value)
         # TODO: averaging requests by user should occur here, before saving.
         self._save_trial(trial)
         # TODO: To signal early stopping, set Trial.status to "STOPPED".

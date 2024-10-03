@@ -101,9 +101,9 @@ def load_json(path: Path) -> object:
     return json.loads(obj_str)
 
 
-def to_list(values: _NumberValues | tuple | list) -> list:
+def to_list(values: _NumberValues | tuple | list | str) -> list:
     """Get tuple or numeric value into list. Lists are left unchanged."""
-    if isinstance(values, int | float):
+    if isinstance(values, int | float | str):
         return [values]
     if isinstance(values, list | tuple):
         return list(values)  # type: ignore  # noqa: PGH003
