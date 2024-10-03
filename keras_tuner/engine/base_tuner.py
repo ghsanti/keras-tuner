@@ -23,21 +23,22 @@ from typing import TYPE_CHECKING, Any, cast
 from keras_tuner import backend, errors, utils
 from keras_tuner import config as config_module
 from keras_tuner.distribute import utils as dist_utils
+from keras_tuner.types import _Model, _SomeObjective, _Verbose
 
 from . import stateful, tuner_utils
 from .hypermodel import HyperModel, get_hypermodel
+from .hyperparameters import HyperParameters
 from .trial import TrialStatus
 
 if TYPE_CHECKING:
-    from keras_tuner.engine.oracle import Oracle
-    from keras_tuner.engine.trial import Trial
-    from keras_tuner.types import _Model, _SomeObjective, _Verbose
+    from keras_tuner.distribute.oracle_client import OracleClient
+
+    from .oracle import Oracle
+    from .trial import Trial
 else:
     Oracle = Any
     Trial = Any
-    _SomeObjective = Any
-    _Verbose = Any
-    _Model = Any
+    OracleClient = Any
 
 
 class BaseTuner(stateful.Stateful):
@@ -67,12 +68,12 @@ class BaseTuner(stateful.Stateful):
     handled by the `Tuner` class, which is a subclass of `BaseTuner`.
 
     Args:
-        oracle: Instance of Oracle class.
-        hypermodel: Instance of `HyperModel` class (or callable that takes
-            hyperparameters and returns a `Model` instance). It is optional
-            when `Tuner.run_trial()` is overriden and does not use
+        oracle: Oracle instance.
+        hypermodel: HyperModel() or callable that takes
+            hyperparameters and returns a `Model()`. It is optional
+            when `Tuner.run_trial()` is overridden and does not use
             `self.hypermodel`.
-        directory: A string, the relative path to the working directory.
+        directory: The relative path to the projects base directory.
         project_name: A string, the name to use as prefix for files saved by
             this Tuner.
         overwrite: Boolean, defaults to `False`. If `False`, reloads an
@@ -91,12 +92,13 @@ class BaseTuner(stateful.Stateful):
 
     def __init__(
         self,
-        oracle: Oracle,
+        oracle: Oracle | OracleClient,
         hypermodel: HyperModel | None = None,
-        directory: str = ".",
+        *,  # make next params kwd only.
+        directory: str | Path = ".",
         project_name: str = "untitled_project",
         overwrite: bool = False,
-        **kwargs,
+        **kwargs: dict[str, Any],
     ):
         if len(kwargs) > 0:
             msg = (
@@ -108,9 +110,9 @@ class BaseTuner(stateful.Stateful):
         self.hypermodel = get_hypermodel(hypermodel)
 
         # Ops and metadata
-        self.directory = directory
+        self.directory = Path(directory)
         self.project_name = project_name
-        self.oracle._set_project_dir(self.directory, self.project_name)
+        self.oracle._set_project_dir(self.directory, self.project_name)  # noqa: SLF001
 
         if overwrite and backend.io.exists(self.project_dir):
             backend.io.rmtree(self.project_dir)
@@ -129,9 +131,9 @@ class BaseTuner(stateful.Stateful):
         if dist_utils.has_chief_oracle() and not dist_utils.is_chief_oracle():
             # Proxies requests to the chief oracle.
             # Avoid import at the top, to avoid inconsistent protobuf versions.
-            from keras_tuner.distribute import oracle_client
+            from keras_tuner.distribute.oracle_client import OracleClient
 
-            self.oracle = oracle_client.OracleClient(self.oracle)
+            self.oracle = OracleClient(self.oracle)
 
     def _activate_all_conditions(self):
         # Lists of stacks of conditions used during `explore_space()`.
@@ -179,7 +181,7 @@ class BaseTuner(stateful.Stateful):
         if self.hypermodel is None:
             return
 
-        # declare_hyperparameters is not overriden.
+        # declare_hyperparameters is not overridden.
         hp = self.oracle.get_space()
         self.hypermodel.declare_hyperparameters(hp)
         self.oracle.update_space(hp)
@@ -237,7 +239,7 @@ class BaseTuner(stateful.Stateful):
     def _run_and_update_trial(self, trial: Trial, *fit_args, **fit_kwargs):
         results = self.run_trial(trial, *fit_args, **fit_kwargs)
         if self.oracle.get_trial(trial.trial_id).metrics.exists(
-            self.oracle.objective.name
+            self.oracle.objective.name  # because of the whitelisted args
         ):
             # The oracle is updated by calling `self.oracle.update_trial()` in
             # `Tuner.run_trial()`. For backward compatibility, we support this
@@ -303,7 +305,7 @@ class BaseTuner(stateful.Stateful):
         """
         raise NotImplementedError
 
-    def load_model(self, trial: Trial):
+    def load_model(self, trial: Trial) -> Any:
         """Load a Model from a given trial.
 
         For models that report intermediate results to the `Oracle`, generally
@@ -364,10 +366,12 @@ class BaseTuner(stateful.Stateful):
         models = [self.load_model(trial) for trial in best_trials]
         return models
 
-    def get_best_hyperparameters(self, num_trials: int = 1):
+    def get_best_hyperparameters(
+        self, num_trials: int = 1
+    ) -> list[HyperParameters]:
         """Return the best hyperparameters, as determined by the objective.
 
-        This method can be used to reinstantiate the (untrained) best model
+        This method can be used to re-instantiate the (untrained) best model
         found during the search process.
 
         Example:
@@ -384,10 +388,12 @@ class BaseTuner(stateful.Stateful):
 
         """
         return [
-            t.hyperparameters for t in self.oracle.get_best_trials(num_trials)
+            t.hyperparameters
+            for t in self.oracle.get_best_trials(num_trials)
+            if t.hyperparameters is not None
         ]
 
-    def search_space_summary(self):
+    def search_space_summary(self) -> None:
         """Print search space summary.
 
         The methods prints a summary of the hyperparameters in the search
@@ -407,7 +413,7 @@ class BaseTuner(stateful.Stateful):
             print(f"{name} ({p.__class__.__name__})")
             print(config)
 
-    def results_summary(self, num_trials: int = 10):
+    def results_summary(self, num_trials: int = 10) -> None:
         """Display tuning results summary.
 
         The method prints a summary of the search results including the
@@ -461,15 +467,17 @@ class BaseTuner(stateful.Stateful):
         super().reload(self._get_tuner_fname())
 
     @property
-    def project_dir(self) -> str:
-        dirname = str(Path(str(self.directory), self.project_name))
-        utils.create_directory(dirname)
+    def project_dir(self) -> Path:
+        """Concatenate the workdir path with project_name."""
+        dirname = Path(self.directory, self.project_name)
+        utils.create_directory(str(dirname))
         return dirname
 
-    def get_trial_dir(self, trial_id: str) -> str:
-        dirname = str(Path(self.project_dir, f"trial_{trial_id!s}"))
-        utils.create_directory(dirname)
+    def get_trial_dir(self, trial_id: str) -> Path:
+        """Concatenate project dir with trial id."""
+        dirname = Path(self.project_dir, f"trial_{trial_id!s}")
+        utils.create_directory(str(dirname))
         return dirname
 
-    def _get_tuner_fname(self) -> str:
-        return str(Path(self.project_dir, f"{self.tuner_id!s}.json"))
+    def _get_tuner_fname(self) -> Path:
+        return Path(self.project_dir, f"{self.tuner_id!s}.json")

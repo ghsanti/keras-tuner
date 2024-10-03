@@ -14,6 +14,7 @@
 """KerasTuner utilities."""
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import keras
@@ -46,7 +47,7 @@ def try_clear() -> None:
         print()
 
 
-def create_directory(path: str, remove_existing: bool = False) -> None:
+def create_directory(path: Path, *, remove_existing: bool = False) -> None:
     """Create the directory if it doesn't exist."""
     if not io.exists(path):
         io.makedirs(path)
@@ -68,7 +69,7 @@ def deserialize_keras_object(config, module_objects=None, custom_objects=None):
     )
 
 
-def save_json(path: str, obj: object) -> str:
+def save_json(path: Path, obj: object) -> str:
     """Save Python object to a json file.
 
     Args:
@@ -85,7 +86,7 @@ def save_json(path: str, obj: object) -> str:
     return obj_str
 
 
-def load_json(path: str) -> object:
+def load_json(path: Path) -> object:
     """Load json from file.
 
     Args:

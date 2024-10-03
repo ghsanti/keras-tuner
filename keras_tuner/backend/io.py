@@ -26,23 +26,24 @@ else:
 # the tf options are for non-locking thread.
 
 
-def exists(path: str) -> bool:
+def exists(path: Path) -> bool:
     """Check if file exists at path."""
     if tf is None:
-        return Path(path).exists()
-    return tf.io.gfile.exists(path)
+        return path.exists()
+    return tf.io.gfile.exists(str(path))
 
 
-def rmtree(path: str) -> None:
+def rmtree(path: Path) -> None:
     """Remove the whole directory tree under path."""
     if tf is None:
         return shutil.rmtree(path)
-    return tf.io.gfile.rmtree(path)
+    return tf.io.gfile.rmtree(str(path))
 
 
-def File(filename: str, mode: str):
+def File(filename: Path, mode: str):
+    """Get fileobject at path."""
     if tf is None:
-        file = Path(filename).open(mode)
+        file = filename.open(mode)
     else:
         file = tf.io.gfile.GFile(filename, mode)
 
@@ -56,12 +57,12 @@ def glob(glob_pattern: str) -> list[str]:
     return tf.io.gfile.glob(glob_pattern)
 
 
-def makedirs(path: str) -> None:
+def makedirs(path: Path) -> None:
     """Create directry and parents at path, unless it exists."""
     if tf is None:
-        Path.mkdir(Path(path), exist_ok=True)
+        Path.mkdir(path, exist_ok=True)
     else:
-        tf.io.gfile.makedirs(path)
+        tf.io.gfile.makedirs(str(path))
 
 
 # The following code is forked from Keras:

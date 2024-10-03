@@ -84,3 +84,8 @@ _SomeObjective: TypeAlias = DefaultObjective | MultiObjective | Objective
 _SomeObjectiveOrName: TypeAlias = _SomeObjective | str
 
 _AllObjectives: TypeAlias = _SomeObjectiveOrName | list[_SomeObjectiveOrName]
+
+# ============HP Types============================
+
+
+_ConditionValues: TypeAlias = list[int] | list[float] | list[bool] | list[str]

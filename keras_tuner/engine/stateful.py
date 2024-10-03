@@ -13,6 +13,8 @@
 # limitations under the License.
 """Tuner base class."""
 
+from pathlib import Path
+
 from keras_tuner import utils
 
 
@@ -31,7 +33,7 @@ class Stateful:
     """
 
     def get_state(self):
-        """Returns the current state of this object.
+        """Return the current state of this object.
 
         This method is called during `save`.
 
@@ -42,7 +44,7 @@ class Stateful:
         raise NotImplementedError
 
     def set_state(self, state):
-        """Sets the current state of this object.
+        """Set the current state of this object.
 
         This method is called during `reload`.
 
@@ -52,8 +54,8 @@ class Stateful:
         """
         raise NotImplementedError
 
-    def save(self, fname):
-        """Saves this object using `get_state`.
+    def save(self, fname: Path):
+        """Save this object using `get_state`.
 
         Args:
             fname: A string, the file name to save to.
@@ -64,8 +66,8 @@ class Stateful:
         """
         return utils.save_json(fname, self.get_state())
 
-    def reload(self, fname):
-        """Reloads this object using `set_state`.
+    def reload(self, fname: Path) -> None:
+        """Reload this object using `set_state`.
 
         Args:
             fname: A string, the file name to restore from.

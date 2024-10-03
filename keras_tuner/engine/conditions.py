@@ -18,6 +18,7 @@ import abc
 from keras import utils
 
 from keras_tuner.protos import keras_tuner_pb2 as protos
+from keras_tuner.types import _ConditionValues, _NumberValues
 from keras_tuner.utils import to_list
 
 
@@ -44,15 +45,18 @@ class Condition:
             A boolean value of whether the condition is true.
 
         """
-        raise NotImplementedError("Must be implemented in subclasses.")
+        msg = "Must be implemented in subclasses."
+        raise NotImplementedError(msg)
 
     @abc.abstractmethod
     def __eq__(self, other):
-        raise NotImplementedError("Must be implemented in subclasses.")
+        msg = "Must be implemented in subclasses."
+        raise NotImplementedError(msg)
 
     @abc.abstractmethod
     def get_config(self):
-        raise NotImplementedError("Must be implemented in subclasses.")
+        msg = "Must be implemented in subclasses."
+        raise NotImplementedError(msg)
 
     @classmethod
     def from_config(cls, config):
@@ -67,7 +71,8 @@ class Condition:
             values = parent.values
             values = [getattr(v, v.WhichOneof("kind")) for v in values]
             return Parent(name=name, values=values)
-        raise ValueError(f"Unrecognized condition of type: {kind}")
+        msg = f"Unrecognized condition of type: {kind}"
+        raise ValueError(msg)
 
 
 # @keras.saving.register_keras_serializable()
@@ -93,7 +98,9 @@ class Parent(Condition):
 
     """
 
-    def __init__(self, name, values):
+    def __init__(
+        self, name: str, values: _NumberValues | str | _ConditionValues
+    ):
         self.name = name
 
         # Standardize on str, int, float, bool.

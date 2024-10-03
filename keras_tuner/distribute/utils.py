@@ -16,8 +16,8 @@
 import os
 
 
-def has_chief_oracle():
-    """Checks for distributed tuning with a chief Oracle.
+def has_chief_oracle() -> bool:
+    """Check for distributed tuning with a chief Oracle.
 
     `CloudOracle` manages its own distribution so should not set
     "KERASTUNER_ORACLE_IP".
@@ -28,22 +28,25 @@ def has_chief_oracle():
     """
     if "KERASTUNER_ORACLE_IP" in os.environ:
         if "KERASTUNER_ORACLE_PORT" not in os.environ:
-            raise RuntimeError(
+            msg = (
                 'Environment variable "KERASTUNER_ORACLE_IP" was set, '
                 'but "KERASTUNER_ORACLE_PORT" was not. Please specify '
                 "a port."
             )
+            raise RuntimeError(msg)
         if "KERASTUNER_TUNER_ID" not in os.environ:
-            raise RuntimeError(
+            msg = (
                 'Environment variable "KERASTUNER_ORACLE_IP" was set, '
                 'but "KERASTUNER_TUNER_ID" was not. Please specify '
                 "an ID for each tuner."
             )
+            raise RuntimeError(msg)
         return True
     return False
 
 
-def is_chief_oracle():
+def is_chief_oracle() -> bool:
+    """Check whether this is the chief oracle."""
     if has_chief_oracle():
         return "chief" in os.environ["KERASTUNER_TUNER_ID"]
     return False

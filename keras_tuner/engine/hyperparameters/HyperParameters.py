@@ -18,9 +18,10 @@ import contextlib
 import copy
 
 from keras_tuner.engine import conditions as conditions_mod
-from keras_tuner.engine.hyperparameters import hp_types
-from keras_tuner.engine.hyperparameters.HyperParameter import HyperParameter
 from keras_tuner.protos import keras_tuner_pb2 as protos
+
+from . import hp_types
+from .HyperParameter import HyperParameter
 
 
 class HyperParameters:
@@ -69,7 +70,7 @@ class HyperParameters:
         self.inactive_scopes = []
 
     @contextlib.contextmanager
-    def name_scope(self, name):
+    def name_scope(self, name: str):
         self._name_scopes.append(name)
         try:
             yield
@@ -77,7 +78,7 @@ class HyperParameters:
             self._name_scopes.pop()
 
     @contextlib.contextmanager
-    def conditional_scope(self, parent_name, parent_values):
+    def conditional_scope(self, parent_name: str, parent_values):
         """Open a scope to create conditional HyperParameters.
 
         All `HyperParameter`s created under this scope will only be active when
@@ -143,7 +144,7 @@ class HyperParameters:
         finally:
             self._conditions.pop()
 
-    def is_active(self, hyperparameter):
+    def is_active(self, hyperparameter: "HyperParameter"):
         """Check if a hyperparameter is currently active for a `Trial`.
 
         A hyperparameter is considered active if and only if all its parent
@@ -170,7 +171,9 @@ class HyperParameters:
             for temp_hp in self._hps[hp_name]
         )
 
-    def _conditions_are_active(self, conditions):
+    def _conditions_are_active(
+        self, conditions: list[conditions_mod.Condition]
+    ):
         return all(condition.is_active(self.values) for condition in conditions)
 
     def _exists(self, name, conditions=None):
@@ -185,7 +188,7 @@ class HyperParameters:
                     return True
         return False
 
-    def _retrieve(self, hp):
+    def _retrieve(self, hp: "HyperParameter"):
         """Get or creates a hyperparameter.
 
         Args:
@@ -202,7 +205,9 @@ class HyperParameters:
             return None  # Ensures inactive values are not relied on by user.
         return self._register(hp)
 
-    def _register(self, hyperparameter, overwrite=False):
+    def _register(
+        self, hyperparameter: "HyperParameter", *, overwrite: bool = False
+    ):
         """Register a hyperparameter in this container.
 
         Args:
@@ -229,41 +234,44 @@ class HyperParameters:
             return self.values[hp.name]
         return None  # Ensures inactive values are not relied on by user.
 
-    def get(self, name):
+    def get(self, name: str):
         """Return the current value of this hyperparameter set."""
         name = self._get_name(name)  # Add name_scopes.
         if name in self.values:
             return self.values[name]  # Only active values are added here.
         if name in self._hps:
-            raise ValueError(f"{name} is currently inactive.")
-        raise KeyError(f"{name} does not exist.")
+            msg = f"{name} is currently inactive."
+            raise ValueError(msg)
+        msg = f"{name} does not exist."
+        raise KeyError(msg)
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str):
         return self.get(name)
 
-    def __contains__(self, name):
+    def __contains__(self, name: str):
         try:
             self.get(name)
             return True
         except (KeyError, ValueError):
             return False
 
+    # ===={ HyperParameters that one calls as HyperParameter().Method }====
     def Choice(
         self,
-        name,
-        values,
+        name: str,
+        values: list[int] | list[float] | list[str] | list[bool],
         ordered=None,
         default=None,
-        parent_name=None,
+        parent_name: str | None = None,
         parent_values=None,
     ):
         """Choice of one value among a predefined set of possible values.
 
         Args:
-            name: A string. the name of parameter. Must be unique for each
-                `HyperParameter` instance in the search space.
-            values: A list of possible values. Values must be int, float,
-                str, or bool. All values must be of the same type.
+            name: unique name for each `HyperParameter` instance in the
+            search space.
+            values: A list of possible values. All values must be of the same
+            type.
             ordered: Optional boolean, whether the values passed should be
                 considered to have an ordering. Defaults to `True` for float/int
                 values.  Must be `False` for any other values.
@@ -295,11 +303,11 @@ class HyperParameters:
 
     def Int(
         self,
-        name,
-        min_value,
-        max_value,
-        step=None,
-        sampling="linear",
+        name: str,
+        min_value: int,
+        max_value: int,
+        step: int | None = None,
+        sampling: str = "linear",
         default=None,
         parent_name=None,
         parent_values=None,
@@ -337,10 +345,9 @@ class HyperParameters:
         The possible values are [2, 4, 8, 16, 32].
 
         Args:
-            name: A string. the name of parameter. Must be unique for each
-                `HyperParameter` instance in the search space.
-            min_value: Integer, the lower limit of range, inclusive.
-            max_value: Integer, the upper limit of range, inclusive.
+            name: Unique `HyperParameter` name in the search space.
+            min_value: the lower limit of range, inclusive.
+            max_value: the upper limit of range, inclusive.
             step: Optional integer, the distance between two consecutive samples
                 in the range. If left unspecified, it is possible to sample any
                 integers in the interval. If `sampling="linear"`, it will be the
@@ -370,6 +377,7 @@ class HyperParameters:
 
         """
         with self._maybe_conditional_scope(parent_name, parent_values):
+            # instance of a HP.
             hp = hp_types.Int(
                 name=self._get_name(name),  # Add name_scopes.
                 min_value=min_value,
@@ -383,11 +391,11 @@ class HyperParameters:
 
     def Float(
         self,
-        name,
-        min_value,
-        max_value,
-        step=None,
-        sampling="linear",
+        name: str,
+        min_value: float,
+        max_value: float,
+        step: float | None = None,
+        sampling: str = "linear",
         default=None,
         parent_name=None,
         parent_values=None,
@@ -572,7 +580,7 @@ class HyperParameters:
             hps = [hp for hp in hps if not self._exists(hp.name, hp.conditions)]
 
         for hp in hps:
-            self._register(hp, overwrite)
+            self._register(hp, overwrite=overwrite)
 
     def ensure_active_values(self):
         """Add and remove values if necessary.
@@ -672,7 +680,8 @@ class HyperParameters:
             elif isinstance(value, str):
                 val = protos.Value(string_value=value)
             else:
-                raise ValueError(f"Unrecognized value type: {value}")
+                msg = f"Unrecognized value type: {value}"
+                raise TypeError(msg)
             values[name] = val
 
         return protos.HyperParameters(
@@ -687,15 +696,15 @@ class HyperParameters:
         )
 
     @contextlib.contextmanager
-    def _maybe_conditional_scope(self, parent_name, parent_values):
+    def _maybe_conditional_scope(self, parent_name: str | None, parent_values):
         if parent_name:
             with self.conditional_scope(parent_name, parent_values):
                 yield
         else:
             yield
 
-    def _get_name(self, name, name_scopes=None):
-        """Returns a name qualified by `name_scopes`."""
+    def _get_name(self, name: str, name_scopes=None):
+        """Get a name qualified by `name_scopes`."""
         if name_scopes is None:
             name_scopes = self._name_scopes
 

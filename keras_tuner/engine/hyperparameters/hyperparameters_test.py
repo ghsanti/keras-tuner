@@ -134,7 +134,7 @@ def test_is_active_with_hp_name_and_hp():
 
 
 def test_build_with_conditional_scope():
-    def build_model(hp):
+    def build_model(hp: HyperParameters):
         model = hp.Choice("model", ["v1", "v2"])
         with hp.conditional_scope("model", "v1"):
             v1_params = {

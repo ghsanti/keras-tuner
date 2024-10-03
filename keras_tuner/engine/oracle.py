@@ -640,15 +640,15 @@ class Oracle(stateful.Stateful):
         self._id_to_hash.update(state["id_to_hash"])
         self._display.set_state(state["display"])
 
-    def _set_project_dir(self, directory: str, project_name: str) -> None:
+    def _set_project_dir(self, directory: Path, project_name: str) -> None:
         """Set the project directory and reloads the Oracle."""
-        self._directory = directory
+        self._directory = Path(directory)
         self._project_name = project_name
 
     @property
-    def _project_dir(self) -> str:
+    def _project_dir(self) -> Path:
         """Get the top level directory where we store results."""
-        dirname = str(Path(self._directory, self._project_name))
+        dirname = Path(self._directory, self._project_name)
         utils.create_directory(dirname)
         return dirname
 
@@ -904,12 +904,10 @@ class Display(stateful.Stateful):
     def format_duration(self, dt: timedelta) -> str:
         """Format the delta time in d-h-m-s."""
         s = round(dt.total_seconds())
-        d = float(s) // 86400
-        s %= 86400
-        h = s // 3600
-        s %= 3600
-        m = s // 60
-        s %= 60
+        d, r = divmod(s, 86400)
+        h, r = divmod(r, 3600)
+        m, r = divmod(r, 60)
+        s, r = divmod(r, 60)
 
         if d > 0:
             return f"{d:d}d {h:02d}h {m:02d}m {s:02d}s"
