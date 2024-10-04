@@ -23,12 +23,13 @@ class Numerical(HyperParameter):
 
     def __init__(
         self,
-        name,
-        min_value,
-        max_value,
-        step=None,
-        sampling="linear",
-        default=None,
+        name: str,
+        min_value: float,
+        max_value: float,
+        *,
+        step: float | None = None,
+        sampling: str = "linear",
+        default: float | None = None,
         **kwargs,
     ):
         super().__init__(name=name, default=default, **kwargs)
@@ -38,7 +39,7 @@ class Numerical(HyperParameter):
         self.sampling = sampling
         self._check_sampling_arg()
 
-    def _check_sampling_arg(self):
+    def _check_sampling_arg(self) -> None:
         if self.min_value > self.max_value:
             msg = (
                 f"For HyperParameters.{self.__class__.__name__}"
@@ -82,7 +83,9 @@ class Numerical(HyperParameter):
             )
             raise ValueError(msg)
 
-    def _sample_numerical_value(self, prob, max_value=None):
+    def _sample_numerical_value(
+        self, prob: float, max_value: float | None = None
+    ) -> float | None:
         """Sample a value with the cumulative prob in the given range."""
         if max_value is None:
             max_value = self.max_value
@@ -97,8 +100,11 @@ class Numerical(HyperParameter):
                 - self.min_value
                 * math.pow(max_value / self.min_value, 1 - prob)
             )
+        return None
 
-    def _numerical_to_prob(self, value, max_value=None):
+    def _numerical_to_prob(
+        self, value: float, max_value: float | None = None
+    ) -> float | None:
         """Convert a numerical value to range [0.0, 1.0)."""
         if max_value is None:
             max_value = self.max_value
@@ -115,9 +121,12 @@ class Numerical(HyperParameter):
             return 1.0 - math.log(
                 (max_value + self.min_value - value) / self.min_value
             ) / math.log(max_value / self.min_value)
+        return None
 
-    def _get_n_values(self):
+    def _get_n_values(self) -> int | None:
         """Get the total number of possible values using step."""
+        if self.step is None:
+            return None
         if self.sampling == "linear":
             # +1 so that max_value may be sampled.
             return int((self.max_value - self.min_value) // self.step + 1)
@@ -127,20 +136,22 @@ class Numerical(HyperParameter):
             int(math.log(self.max_value / self.min_value, self.step) + 1e-8) + 1
         )
 
-    def _get_value_by_index(self, index):
+    def _get_value_by_index(self, index: int) -> float | int:
         """Get the index-th value in the range given step."""
+        if self.step is None:
+            msg = "step must be a positive integer."
+            raise TypeError(msg)
         if self.sampling == "linear":
             return self.min_value + index * self.step
         if self.sampling == "log":
             return self.min_value * math.pow(self.step, index)
-        if self.sampling == "reverse_log":
-            return (
-                self.max_value
-                + self.min_value
-                - self.min_value * math.pow(self.step, index)
-            )
+        return (  # self.sampling == "reverse_log":
+            self.max_value
+            + self.min_value
+            - self.min_value * math.pow(self.step, index)
+        )
 
-    def _sample_with_step(self, prob):
+    def _sample_with_step(self, prob: float) -> float | None:
         """Sample a value with the cumulative prob in the given range.
 
         The range is divided evenly by `step`. So only sampling from a finite
@@ -148,25 +159,35 @@ class Numerical(HyperParameter):
         since the function takes care of the inclusion of max_value.
         """
         n_values = self._get_n_values()
+        if n_values is None:
+            return None
         index = hp_utils.prob_to_index(prob, n_values)
         return self._get_value_by_index(index)
 
     @property
-    def values(self):
+    def values(
+        self,
+    ) -> list[float | None] | tuple[float, ...] | None:
         if self.step is None:
             # Evenly select 10 samples as the values.
             return tuple(
                 {self.prob_to_value(i * 0.1 + 0.05) for i in range(10)}
             )
-        n_values = self._get_n_values()
-        return (self._get_value_by_index(i) for i in range(n_values))
 
-    def _to_prob_with_step(self, value):
+        n_values = self._get_n_values()
+        if n_values:
+            return [self._get_value_by_index(i) for i in range(n_values)]
+        return None
+
+    def _to_prob_with_step(self, value: float) -> float | None:
         """Convert to cumulative prob with step specified.
 
         When calling the function, no need to use (max_value + 1) since the
         function takes care of the inclusion of max_value.
         """
+        index = None
+        if self.step is None:
+            return None
         if self.sampling == "linear":
             index = (value - self.min_value) // self.step
         if self.sampling == "log":
@@ -177,4 +198,6 @@ class Numerical(HyperParameter):
                 self.step,
             )
         n_values = self._get_n_values()
-        return hp_utils.index_to_prob(index, n_values)
+        if index and n_values:
+            return hp_utils.index_to_prob(index, n_values)
+        return None

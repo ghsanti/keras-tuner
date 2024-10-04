@@ -97,7 +97,7 @@ def test_int_proto():
 
 
 def test_int_raise_error_with_float_min_value():
-    with pytest.raises(ValueError, match="must be an int"):
+    with pytest.raises(TypeError, match="must be an int"):
         hp_module.Int("j", 0.5, 10)
 
 
@@ -116,9 +116,9 @@ def test_serialize_deserialize_int():
 
 
 def test_int_values_property_with_step():
-    assert list(hp_module.Int("int", 2, 8, 2).values) == [2, 4, 6, 8]
-    assert isinstance(list(hp_module.Int("int", 2, 8, 2).values)[0], int)
-    assert list(hp_module.Int("int", 2, 8, 2, sampling="log").values) == [
+    assert list(hp_module.Int("int", 2, 8, step=2).values) == [2, 4, 6, 8]
+    assert isinstance(list(hp_module.Int("int", 2, 8, step=2).values)[0], int)
+    assert list(hp_module.Int("int", 2, 8, step=2, sampling="log").values) == [
         2,
         4,
         8,

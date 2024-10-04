@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from keras_tuner.engine import conditions as conditions_mod
 from keras_tuner.engine.hyperparameters import hp_utils
 from keras_tuner.protos import keras_tuner_pb2 as protos
@@ -21,6 +22,28 @@ from . import numerical
 
 class Float(numerical.Numerical):
     """Floating point value hyperparameter.
+
+    Args:
+        name: A string. the name of parameter. Must be unique for each
+            `HyperParameter` instance in the search space.
+        min_value: Float, the lower bound of the range.
+        max_value: Float, the upper bound of the range.
+        step: Optional float, the distance between two consecutive samples in
+            the range. If left unspecified, it is possible to sample any value
+            in the interval. If `sampling="linear"`, it will be the minimum
+            additive between two samples. If `sampling="log"`, it will be the
+            minimum multiplier between two samples.
+        sampling: String. One of "linear", "log", "reverse_log". Defaults to
+            "linear". When sampling value, it always start from a value in range
+            [0.0, 1.0). The `sampling` argument decides how the value is
+            projected into the range of [min_value, max_value].
+            "linear": min_value + value * (max_value - min_value)
+            "log": min_value * (max_value / min_value) ^ value
+            "reverse_log":
+                max_value - min_value * ((max_value/min_value)^(1 - value) - 1)
+        default: Float, the default value to return for the parameter. If
+            unspecified, the default value will be `min_value`.
+
 
     Example #1:
 
@@ -50,27 +73,6 @@ class Float(numerical.Numerical):
     When `sampling="log"`, the `step` is multiplied between samples.
     The possible values are [0.001, 0.01, 0.1, 1, 10].
 
-    Args:
-        name: A string. the name of parameter. Must be unique for each
-            `HyperParameter` instance in the search space.
-        min_value: Float, the lower bound of the range.
-        max_value: Float, the upper bound of the range.
-        step: Optional float, the distance between two consecutive samples in
-            the range. If left unspecified, it is possible to sample any value
-            in the interval. If `sampling="linear"`, it will be the minimum
-            additive between two samples. If `sampling="log"`, it will be the
-            minimum multiplier between two samples.
-        sampling: String. One of "linear", "log", "reverse_log". Defaults to
-            "linear". When sampling value, it always start from a value in range
-            [0.0, 1.0). The `sampling` argument decides how the value is
-            projected into the range of [min_value, max_value].
-            "linear": min_value + value * (max_value - min_value)
-            "log": min_value * (max_value / min_value) ^ value
-            "reverse_log":
-                max_value - min_value * ((max_value/min_value)^(1 - value) - 1)
-        default: Float, the default value to return for the parameter. If
-            unspecified, the default value will be `min_value`.
-
     """
 
     def __init__(
@@ -78,13 +80,14 @@ class Float(numerical.Numerical):
         name: str,
         min_value: float,
         max_value: float,
+        *,
         step: float | None = None,
         sampling: str = "linear",
         default: float | None = None,
         **kwargs,
-    ):
+    ) -> None:
         if step is not None:
-            self.step = float(step)
+            self.step = step
         super().__init__(
             name=name,
             min_value=float(min_value),
@@ -104,15 +107,24 @@ class Float(numerical.Numerical):
         )
 
     @property
-    def default(self):
-        return self._default if self._default is not None else self.min_value
+    def default(self) -> float:
+        """Default parameter value."""
+        if self._default is not None and not isinstance(
+            self._default, float | int
+        ):
+            msg = f"""Default value for Float must be an float or None.
+            Found type: {type(self._default)}"""
+            raise TypeError(msg)
+        return float(
+            self._default if self._default is not None else self.min_value
+        )
 
-    def prob_to_value(self, prob):
+    def prob_to_value(self, prob: float):
         if self.step is None:
             return self._sample_numerical_value(prob)
         return self._sample_with_step(prob)
 
-    def value_to_prob(self, value):
+    def value_to_prob(self, value: float):
         if self.step is None:
             return self._numerical_to_prob(value)
         return self._to_prob_with_step(value)

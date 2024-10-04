@@ -16,6 +16,8 @@ import random
 
 from keras_tuner import utils
 from keras_tuner.engine import conditions as conditions_mod
+from keras_tuner.engine.conditions import Condition
+from keras_tuner.types import _AnyHyperParameterValue
 
 
 class HyperParameter:
@@ -35,20 +37,17 @@ class HyperParameter:
 
     """
 
-    def __init__(self, name: str, default=None, conditions=None):
+    def __init__(
+        self,
+        name: str,
+        default: _AnyHyperParameterValue | None = None,
+        conditions: list[Condition] | None = None,
+    ):
         self.name = name
         self._default = default
 
         conditions = utils.to_list(conditions) if conditions else []
         self.conditions = conditions
-
-    def get_config(self):
-        conditions = [conditions_mod.serialize(c) for c in self.conditions]
-        return {
-            "name": self.name,
-            "default": self.default,
-            "conditions": conditions,
-        }
 
     @property
     def default(self):
@@ -71,6 +70,14 @@ class HyperParameter:
     def value_to_prob(self, value):
         """Convert a hp value to cumulative probability in range [0.0, 1.0)."""
         raise NotImplementedError
+
+    def get_config(self):
+        conditions = [conditions_mod.serialize(c) for c in self.conditions]
+        return {
+            "name": self.name,
+            "default": self.default,
+            "conditions": conditions,
+        }
 
     @classmethod
     def from_config(cls, config):

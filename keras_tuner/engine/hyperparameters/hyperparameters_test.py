@@ -111,7 +111,7 @@ def test_to_proto_unrecognized_value_type():
     hps.Fixed("d", "3")
     hps.values["d"] = None
 
-    with pytest.raises(ValueError, match="Unrecognized value type"):
+    with pytest.raises(TypeError, match="Unrecognized value type"):
         HyperParameters.from_proto(hps.to_proto())
 
 

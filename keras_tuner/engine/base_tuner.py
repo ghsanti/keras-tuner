@@ -18,27 +18,19 @@ import os
 import traceback
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from keras_tuner import backend, errors, utils
 from keras_tuner import config as config_module
 from keras_tuner.distribute import utils as dist_utils
+from keras_tuner.distribute.oracle_client import OracleClient
 from keras_tuner.types import _Model, _SomeObjective, _Verbose
 
 from . import stateful, tuner_utils
 from .hypermodel import HyperModel, get_hypermodel
 from .hyperparameters import HyperParameters
-from .trial import TrialStatus
-
-if TYPE_CHECKING:
-    from keras_tuner.distribute.oracle_client import OracleClient
-
-    from .oracle import Oracle
-    from .trial import Trial
-else:
-    Oracle = Any
-    Trial = Any
-    OracleClient = Any
+from .oracle import Oracle
+from .trial import Trial, TrialStatus
 
 
 class BaseTuner(stateful.Stateful):
@@ -112,7 +104,8 @@ class BaseTuner(stateful.Stateful):
         # Ops and metadata
         self.directory = Path(directory)
         self.project_name = project_name
-        self.oracle._set_project_dir(self.directory, self.project_name)  # noqa: SLF001
+        if isinstance(self.oracle, Oracle):
+            self.oracle._set_project_dir(self.directory, self.project_name)  # noqa: SLF001 disable the private member access.
 
         if overwrite and backend.io.exists(self.project_dir):
             backend.io.rmtree(self.project_dir)
@@ -133,7 +126,8 @@ class BaseTuner(stateful.Stateful):
             # Avoid import at the top, to avoid inconsistent protobuf versions.
             from keras_tuner.distribute.oracle_client import OracleClient
 
-            self.oracle = OracleClient(self.oracle)
+            if isinstance(self.oracle, Oracle):
+                self.oracle = OracleClient(self.oracle)
 
     def _activate_all_conditions(self):
         # Lists of stacks of conditions used during `explore_space()`.
@@ -305,7 +299,7 @@ class BaseTuner(stateful.Stateful):
         """
         raise NotImplementedError
 
-    def load_model(self, trial: Trial) -> Any:
+    def load_model(self, trial: Trial) -> _Model:
         """Load a Model from a given trial.
 
         For models that report intermediate results to the `Oracle`, generally
@@ -346,7 +340,7 @@ class BaseTuner(stateful.Stateful):
     def on_search_end(self) -> None:
         """Called at the end of the `search` method."""  # noqa: D401
 
-    def get_best_models(self, num_models: int = 1):
+    def get_best_models(self, num_models: int = 1) -> list[_Model]:
         """Return the best model(s), as determined by the objective.
 
         This method is for querying the models trained during the search.
@@ -363,8 +357,7 @@ class BaseTuner(stateful.Stateful):
 
         """
         best_trials = self.oracle.get_best_trials(num_models)
-        models = [self.load_model(trial) for trial in best_trials]
-        return models
+        return [self.load_model(trial) for trial in best_trials]
 
     def get_best_hyperparameters(
         self, num_trials: int = 1
@@ -470,13 +463,13 @@ class BaseTuner(stateful.Stateful):
     def project_dir(self) -> Path:
         """Concatenate the workdir path with project_name."""
         dirname = Path(self.directory, self.project_name)
-        utils.create_directory(str(dirname))
+        utils.create_directory(dirname)
         return dirname
 
     def get_trial_dir(self, trial_id: str) -> Path:
         """Concatenate project dir with trial id."""
         dirname = Path(self.project_dir, f"trial_{trial_id!s}")
-        utils.create_directory(str(dirname))
+        utils.create_directory(dirname)
         return dirname
 
     def _get_tuner_fname(self) -> Path:

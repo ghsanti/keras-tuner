@@ -27,7 +27,7 @@ def test_trial_proto():
     hps.Int("a", 0, 10, default=3)
     trial = trial_module.Trial(hps, trial_id="trial1", status="COMPLETED")
     trial.metrics.register("score", direction="max")
-    trial.metrics.update("score", 10, step=1)
+    trial.metrics.append_execution("score", 10)
 
     proto = trial.to_proto()
     assert len(proto.hyperparameters.space.int_space) == 1
@@ -41,20 +41,21 @@ def test_trial_proto():
     assert new_trial.score == trial.score
     assert new_trial.best_step == trial.best_step
 
+    # manually set a score and best step
     trial.score = -10
-    trial.best_step = 3
+    trial.best_step = (0, 3)
 
     proto = trial.to_proto()
     assert proto.HasField("score")
     assert proto.score.value == -10
-    assert proto.score.step == 3
+    assert proto.score.step == (0, 3)
 
     new_trial = trial_module.Trial.from_proto(proto)
     assert new_trial.score == -10
     assert new_trial.best_step == 3
-    assert new_trial.metrics.get_history("score") == [
-        metrics_tracking.MetricObservation(10, step=1)
-    ]
+    new = metrics_tracking.MetricHistory("max")
+    new.append_execution([10])
+    assert new_trial.metrics.get_config()["score"] == new.get_last_values()
 
 
 def test_trial_status_proto():

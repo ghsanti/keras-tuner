@@ -41,7 +41,7 @@ def test_fixed():
     assert fixed.random_sample() == 8.2
     assert fixed.value_to_prob(fixed.value) == 0.5
 
-    with pytest.raises(TypeError, match="`Fixed` value must be an"):
+    with pytest.raises(TypeError, match="Value must be a string or a float."):
         Fixed("fixed", None)
 
 

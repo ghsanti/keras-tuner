@@ -18,7 +18,6 @@ from keras_tuner.engine.hyperparameters.HyperParameter import HyperParameter
 from keras_tuner.protos import keras_tuner_pb2 as protos
 
 
-# @keras.saving.register_keras_serializable()
 class Fixed(HyperParameter):
     """Fixed, untunable value.
 
@@ -29,35 +28,32 @@ class Fixed(HyperParameter):
 
     """
 
-    def __init__(
-        self, name: str, value: bool | int | str | object, **kwargs
-    ) -> None:
+    def __init__(self, name: str, value: str | float, **kwargs) -> None:
         super().__init__(name=name, default=value, **kwargs)
         self.name = name
-
-        if not isinstance(value, (float | str | bool | int)):
-            msg = (
-                "`Fixed` value must be an `int`, `float`, `str`, "
-                f"or `bool`, found {value}"
-            )
-            raise TypeError(msg)
         self.value = value
 
+        # health check.
+        if value is None:
+            msg = "Value must be a string or a float. Found None."
+            raise TypeError(msg)
+
     def __repr__(self) -> str:
+        """Get a string representation of the init call."""
         return f"Fixed(name: {self.name}, value: {self.value})"
 
     @property
-    def values(self):
+    def values(self) -> tuple[str | float]:
         return (self.value,)
 
-    def prob_to_value(self, prob):
+    def prob_to_value(self, prob: float) -> str | float:
         return self.value
 
-    def value_to_prob(self, value):
+    def value_to_prob(self, value: str | float) -> float:
         return 0.5
 
     @property
-    def default(self):
+    def default(self) -> str | float:
         return self.value
 
     def get_config(self):

@@ -11,28 +11,45 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""HyperModel base class."""
+"""HyperModel base class.
+
+`get_hypermodel` function is defined.
+
+It returns a `HyperModel|None`, either by:
+    * passing the HyperModel,
+    * passing a Callable that takes `hps` and returns a _Model.
+
+The second case the HyperModel is created automatically.
+"""
+
+from typing import TYPE_CHECKING, Any, Protocol
 
 from keras_tuner import errors
+from keras_tuner.types import _FloatListOrFloat, _Model
+
+if TYPE_CHECKING:
+    from keras.api.callbacks import History
+
+    from .hyperparameters.HyperParameters import HyperParameters
+else:
+    HyperParameters = Any
+    History = Any
 
 
 class HyperModel:
     """Defines a search space of models.
 
-    A search space is a collection of models. The `build` function will build
-    one of the models from the space using the given `HyperParameters` object.
-
-    Users should subclass the `HyperModel` class to define their search spaces
-    by overriding `build()`, which creates and returns the Keras model.
-    Optionally, you may also override `fit()` to customize the training process
-    of the model.
+    Args:
+        name: Optional string, the name of this HyperModel.
+        tunable: Boolean, whether the hyperparameters defined in this
+            hypermodel should be added to search space. If `False`, either the
+            search space for these parameters must be defined in advance, or
+            the default values will be used. Defaults to True.
 
     Examples:
-    In `build()`, you can create the model using the hyperparameters.
-
     ```python
     class MyHyperModel(kt.HyperModel):
-        def build(self, hp):
+        def build(self, hp):  # override `build`
             model = keras.Sequential()
             model.add(
                 keras.layers.Dense(
@@ -41,12 +58,10 @@ class HyperModel:
             )
             model.add(keras.layers.Dense(1, activation="relu"))
             model.compile(loss="mse")
-            return model
+            return model  # return model
     ```
 
-    When overriding `HyperModel.fit()`, if you use `model.fit()` to train your
-    model, which returns the training history, you can return it directly. You
-    may use `hp` to specify any hyperparameters to tune.
+    Optionally override `.fit`:
 
     ```python
     class MyHyperModel(kt.HyperModel):
@@ -75,24 +90,18 @@ class HyperModel:
             }
     ```
 
-    Args:
-        name: Optional string, the name of this HyperModel.
-        tunable: Boolean, whether the hyperparameters defined in this
-            hypermodel should be added to search space. If `False`, either the
-            search space for these parameters must be defined in advance, or
-            the default values will be used. Defaults to True.
 
     """
 
-    def __init__(self, name=None, tunable=True):
+    def __init__(self, name: str | None = None, *, tunable: bool = True):
         self.name = name
         self.tunable = tunable
 
         self._build = self.build
         self.build = self._build_wrapper
 
-    def build(self, hp):
-        """Builds a model.
+    def build(self, hp: HyperParameters) -> _Model:
+        """Build a model. This must be implemented when subclassing.
 
         Args:
             hp: A `HyperParameters` instance.
@@ -103,18 +112,21 @@ class HyperModel:
         """
         raise NotImplementedError
 
-    def _build_wrapper(self, hp, *args, **kwargs):
+    def _build_wrapper(self, hp: HyperParameters, *args, **kwargs) -> _Model:
+        """User passes a build method, we use the wrapped."""
         if not self.tunable:
             # Copy `HyperParameters` object so that new entries are not added
             # to the search space.
             hp = hp.copy()
         return self._build(hp, *args, **kwargs)
 
-    def declare_hyperparameters(self, hp):
+    def declare_hyperparameters(self, hp: HyperParameters):
         pass
 
-    def fit(self, hp, model, *args, **kwargs):
-        """Train the model.
+    def fit(
+        self, hp: HyperParameters, model: _Model, *args, **kwargs
+    ) -> History | dict[str, _FloatListOrFloat] | float:
+        """Train the model. This can optionally overridden, or use default.
 
         Args:
             hp: HyperParameters.
@@ -122,7 +134,7 @@ class HyperModel:
             **kwargs: All arguments passed to `Tuner.search()` are in the
                 `kwargs` here. It always contains a `callbacks` argument, which
                 is a list of default Keras callback functions for model
-                checkpointing, tensorboard configuration, and other tuning
+                checkpointing, Tensorboard configuration, and other tuning
                 utilities. If `callbacks` is passed by the user from
                 `Tuner.search()`, these default callbacks will be appended to
                 the user provided list.
@@ -141,26 +153,49 @@ class HyperModel:
         return model.fit(*args, **kwargs)
 
 
-class DefaultHyperModel(HyperModel):
-    """Produces HyperModel from a model building function."""
+class BuildType(Protocol):
+    """Call method for HyperModel.build."""
 
-    def __init__(self, build, name=None, tunable=True):
-        super().__init__(name=name)
+    def __call__(self, hp: HyperParameters) -> _Model:
+        """Call signature."""
+        raise NotImplementedError
+
+
+class DefaultHyperModel(HyperModel):
+    """Produces HyperModel from a model building function.
+
+    This is a simple way so that a user passes just `build`
+    returning a model to the `Tuner.search()`
+    """
+
+    def __init__(
+        self,
+        build: BuildType,
+        name: str | None = None,
+        *,
+        tunable: bool = True,
+    ):
+        super().__init__(name=name, tunable=tunable)
         self.build = build
 
 
-def get_hypermodel(hypermodel):
-    """Gets a HyperModel from a HyperModel or callable."""
+def get_hypermodel(
+    hypermodel: HyperModel | BuildType | None,
+) -> HyperModel:
+    """Get a HyperModel from a HyperModel or callable.
+
+    This is just a simple interface function.
+    """
     if hypermodel is None:
         return None
-
     if isinstance(hypermodel, HyperModel):
         return hypermodel
 
     if not callable(hypermodel):
-        raise errors.FatalValueError(
+        msg = (
             "The `hypermodel` argument should be either "
             "a callable with signature `build(hp)` returning a model, "
             "or an instance of `HyperModel`."
         )
+        raise errors.FatalValueError(msg)
     return DefaultHyperModel(hypermodel)

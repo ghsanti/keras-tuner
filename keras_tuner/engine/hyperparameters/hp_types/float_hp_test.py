@@ -149,14 +149,14 @@ def test_float_proto():
 
 
 def test_float_values_property_with_step():
-    assert list(Float("float", 2, 8, 2).values) == [
+    assert list(Float("float", 2, 8, step=2).values) == [
         2.0,
         4.0,
         6.0,
         8.0,
     ]
-    assert isinstance(list(Float("float", 2, 8, 2).values)[0], float)
-    assert list(Float("float", 0.1, 100.0, 10, sampling="log").values) == [
+    assert isinstance(list(Float("float", 2, 8, step=2).values)[0], float)
+    assert list(Float("float", 0.1, 100.0, step=10, sampling="log").values) == [
         0.1,
         1.0,
         10.0,

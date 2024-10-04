@@ -16,6 +16,7 @@
 import hashlib
 import random
 import time
+from pathlib import Path
 from typing import cast
 
 from keras_tuner import utils
@@ -177,7 +178,7 @@ class Trial(stateful.Stateful):
         return trial
 
     @classmethod
-    def load(cls: type["Trial"], fname: str) -> "Trial":
+    def load(cls: type["Trial"], fname: Path) -> "Trial":
         """Load the Trial from the json-configuration file."""
         return cls.from_state(utils.load_json(fname))
 
@@ -192,10 +193,9 @@ class Trial(stateful.Stateful):
             best_step = cast(tuple, self.best_step)
             score = protos.Trial.Score(
                 value=self.score,
-                step={
-                    "exec_idx": best_step[0],
-                    "epoch_idx": best_step[1],
-                },
+                step=protos.Trial.Score.Step(
+                    exec_idx=best_step[0], epoch_idx=best_step[1]
+                ),
             )
         else:
             score = None

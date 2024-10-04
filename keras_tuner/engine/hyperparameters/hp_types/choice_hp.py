@@ -17,7 +17,7 @@ from keras_tuner.engine import conditions as conditions_mod
 from keras_tuner.engine.hyperparameters import hp_utils
 from keras_tuner.engine.hyperparameters.HyperParameter import HyperParameter
 from keras_tuner.protos import keras_tuner_pb2 as protos
-from keras_tuner.types import _ConditionValues
+from keras_tuner.types import _ConditionValue, _ConditionValues
 
 
 class Choice(HyperParameter):
@@ -40,10 +40,10 @@ class Choice(HyperParameter):
 
     def __init__(
         self,
-        name,
+        name: str,
         values: _ConditionValues,
         ordered=None,
-        default=None,
+        default: _ConditionValue | None = None,
         **kwargs,
     ):
         super().__init__(name=name, default=default, **kwargs)

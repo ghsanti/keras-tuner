@@ -89,3 +89,5 @@ _AllObjectives: TypeAlias = _SomeObjectiveOrName | list[_SomeObjectiveOrName]
 
 
 _ConditionValues: TypeAlias = list[int] | list[float] | list[bool] | list[str]
+_ConditionValue = _NumberValues | bool | str
+_AnyHyperParameterValue = _ConditionValue | _ConditionValues

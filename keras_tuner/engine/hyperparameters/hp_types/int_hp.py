@@ -20,14 +20,6 @@ from keras_tuner.protos import keras_tuner_pb2 as protos
 from . import numerical
 
 
-def _check_int(val, arg):
-    int_val = int(val)
-    if int_val != val:
-        msg = f"{arg} must be an int, Received: {val!s} of type {type(val)}."
-        raise ValueError(msg)
-    return int_val
-
-
 class Int(numerical.Numerical):
     """Integer hyperparameter.
 
@@ -86,43 +78,49 @@ class Int(numerical.Numerical):
 
     def __init__(
         self,
-        name,
-        min_value,
-        max_value,
-        step=None,
-        sampling="linear",
-        default=None,
+        name: str,
+        min_value: int,
+        max_value: int,
+        *,
+        step: int | None = None,
+        sampling: str = "linear",
+        default: int | None = None,
         **kwargs,
-    ):
-        if step is not None:
-            step = _check_int(step, arg="step")
-        elif sampling == "linear":
+    ) -> None:
+        if step is None and sampling == "linear":
             step = 1
         super().__init__(
             name=name,
-            min_value=_check_int(min_value, arg="min_value"),
-            max_value=_check_int(max_value, arg="max_value"),
+            min_value=int(min_value),
+            max_value=int(max_value),
             step=step,
             sampling=sampling,
             default=default,
             **kwargs,
         )
 
-    def __repr__(self):
+        if not isinstance(min_value, int) or not isinstance(max_value, int):
+            msg = "must be an int."
+            raise TypeError(msg)
+
+    def __repr__(self) -> str:
+        """Representation of the class instance with values."""
         return (
             f"Int(name: '{self.name}', min_value: {self.min_value}, "
             f"max_value: {self.max_value}, step: {self.step}, "
             f"sampling: {self.sampling}, default: {self.default})"
         )
 
-    def prob_to_value(self, prob):
+    def prob_to_value(self, prob: float) -> int | None:
         if self.step is None:
             # prob is in range [0.0, 1.0), use max_value + 1 so that
             # max_value may be sampled.
-            return int(self._sample_numerical_value(prob, self.max_value + 1))
-        return int(self._sample_with_step(prob))
+            result = self._sample_numerical_value(prob, self.max_value + 1)
+            return int(result) if result is not None else None
+        result = self._sample_with_step(prob)
+        return int(result) if result is not None else None
 
-    def value_to_prob(self, value):
+    def value_to_prob(self, value: float) -> float | None:
         if self.step is None:
             return self._numerical_to_prob(
                 # + 0.5 to center the prob
@@ -133,8 +131,17 @@ class Int(numerical.Numerical):
         return self._to_prob_with_step(value)
 
     @property
-    def default(self):
-        return self._default if self._default is not None else self.min_value
+    def default(self) -> int:
+        """Default value for the parameter."""
+        if self._default is not None and not isinstance(
+            self._default, int | float
+        ):
+            msg = f"""Default value for Int must be an integer or None.
+            Found type: {type(self._default)}"""
+            raise TypeError(msg)
+        return int(
+            self._default if self._default is not None else self.min_value
+        )
 
     def get_config(self):
         config = super().get_config()

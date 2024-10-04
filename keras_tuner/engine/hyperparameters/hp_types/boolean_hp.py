@@ -29,7 +29,7 @@ class Boolean(HyperParameter):
 
     """
 
-    def __init__(self, name, default: bool | None = False, **kwargs):
+    def __init__(self, name: str, *, default: bool | None = False, **kwargs):
         super().__init__(name=name, default=default, **kwargs)
         if default not in {True, False}:
             msg = (
@@ -38,7 +38,8 @@ class Boolean(HyperParameter):
             )
             raise ValueError(msg)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return a string representation."""
         return f'Boolean(name: "{self.name}", default: {self.default})'
 
     @property

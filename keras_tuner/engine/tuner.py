@@ -320,7 +320,7 @@ class Tuner(base_tuner.BaseTuner):
             histories.append(obj_value)
         return histories
 
-    def load_model(self, trial: Trial):
+    def load_model(self, trial: Trial) -> _Model:
         model = self._try_build(trial.hyperparameters)
 
         # Reload best checkpoint.
